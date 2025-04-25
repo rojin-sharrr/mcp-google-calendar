@@ -8,6 +8,7 @@ import { ListColorsHandler } from "./core/ListColorsHandler.js";
 import { CreateEventHandler } from "./core/CreateEventHandler.js";
 import { UpdateEventHandler } from "./core/UpdateEventHandler.js";
 import { DeleteEventHandler } from "./core/DeleteEventHandler.js";
+import { FreeBusyEventHandler } from "./core/FreeBusyEventHandler.js";
 
 /**
  * Handles incoming tool calls, validates arguments, calls the appropriate service,
@@ -38,6 +39,7 @@ const handlerMap: Record<string, BaseToolHandler> = {
     "create-event": new CreateEventHandler(),
     "update-event": new UpdateEventHandler(),
     "delete-event": new DeleteEventHandler(),
+    "get-freebusy": new FreeBusyEventHandler(),
 };
 
 function getHandler(toolName: string): BaseToolHandler {

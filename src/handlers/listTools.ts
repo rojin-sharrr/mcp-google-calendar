@@ -269,6 +269,50 @@ export function getToolDefinitions() {
           required: ["calendarId", "eventId"],
         },
       },
+      {
+        name: "get-freebusy",
+        description: "Retrieve free/busy information for one or more calendars within a time range",
+        inputSchema: {
+          type: "object",
+          properties: {
+            timeMin: {
+              type: "string",
+              description: "The start of the interval in RFC3339 format",
+            },
+            timeMax: {
+              type: "string",
+              description: "The end of the interval in RFC3339 format",
+            },
+            timeZone: {
+              type: "string",
+              description: "Optional. Time zone used in the response (default is UTC)",
+            },
+            groupExpansionMax: {
+              type: "integer",
+              description: "Optional. Maximum number of calendar identifiers to expand per group (max 100)",
+            },
+            calendarExpansionMax: {
+              type: "integer",
+              description: "Optional. Maximum number of calendars to expand (max 50)",
+            },
+            items: {
+              type: "array",
+              description: "List of calendar or group identifiers to check for availability",
+              items: {
+                type: "object",
+                properties: {
+                  id: {
+                    type: "string",
+                    description: "The identifier of a calendar or group",
+                  },
+                },
+                required: ["id"],
+              },
+            },
+          },
+          required: ["timeMin", "timeMax", "items"],
+        },
+      }
     ],
   };
-} 
+}
