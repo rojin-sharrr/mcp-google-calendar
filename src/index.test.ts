@@ -544,7 +544,7 @@ describe('Google Calendar MCP Tool Calls', () => {
       expect(mockValidateTokens).toHaveBeenCalledTimes(1);
     });
 
-    it('should return correct response when arguments are valid', async () => {
+    it('should handle "get-freebusy" tool call', async () => {
       const handler = new FreeBusyEventHandler();
 
       const validArgs = {
