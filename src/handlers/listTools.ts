@@ -303,7 +303,7 @@ export function getToolDefinitions() {
                 properties: {
                   id: {
                     type: "string",
-                    description: "The identifier of a calendar or group",
+                    description: "The identifier of a calendar or group, it usually is a mail format",
                   },
                 },
                 required: ["id"],

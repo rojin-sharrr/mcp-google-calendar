@@ -25,22 +25,20 @@ export class FreeBusyEventHandler extends BaseToolHandler {
     }
 
     const result = await this.queryFreeBusy(oauth2Client, validArgs.data);
-    const calendarCount = Object.keys(result.calendars ?? {}).length;
-    const groupCount = Object.keys(result.groups ?? {}).length;
+    const summaryText = this.generateAvailabilitySummary(result);
 
     return {
       content: [{
         type: "text",
-        text: `Free/busy information retrieved for ${calendarCount} calendar(s) and ${groupCount} group(s).`,
-      }],
-      data: result,
+        text: summaryText,
+      }]
     };
   }
 
   private async queryFreeBusy(
     client: OAuth2Client,
     args: z.infer<typeof FreeBusyEventArgumentsSchema>
-  ): Promise<any> {
+  ): Promise<FreeBusyResponse> {
     try {
       const calendar = this.getCalendar(client);
       const response = await calendar.freebusy.query({
@@ -69,4 +67,24 @@ export class FreeBusyEventHandler extends BaseToolHandler {
     // Check if the difference is less than or equal to 3 months
     return diffInMilliseconds <= threeMonthsInMilliseconds;
   };
+
+  private generateAvailabilitySummary(response: FreeBusyResponse): string {
+    return Object.entries(response.calendars)
+      .map(([email, calendarInfo]) => {
+        if (calendarInfo.errors?.some(error => error.reason === "notFound")) {
+          return `Cannot check availability for ${email} (account not found)\n`;
+        }
+
+        if (calendarInfo.busy.length === 0) {
+          return `${email} is available during ${response.timeMin} to ${response.timeMax}, please schedule calendar to ${email} if you want \n`;
+        }
+
+        const busyTimes = calendarInfo.busy
+          .map(slot => `- From ${slot.start} to ${slot.end}`)
+          .join("\n");
+        return `${email} is busy during:\n${busyTimes}\n`;
+      })
+      .join("\n")
+      .trim();
+  }
 }

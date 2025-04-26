@@ -551,13 +551,20 @@ describe('Google Calendar MCP Tool Calls', () => {
         timeMin: '2025-04-25T00:00:00Z',
         timeMax: '2025-04-25T23:59:59Z',
         timeZone: 'UTC',
-        items: [{ id: 'primary' }],
+        items: [{ id: 'test@gmail.com' }],
       };
 
       const fakeResponse = {
         data: {
           calendars: {
-            primary: { busy: [] },
+            "test@gmail.com" : {
+              "errors": [
+                {
+                  "domain": "global",
+                  "reason": "notFound"
+                }
+              ]
+            },
           },
           groups: {},
         },
@@ -569,8 +576,7 @@ describe('Google Calendar MCP Tool Calls', () => {
 
       const result = await handler.runTool(validArgs, {} as any);
 
-      expect(result.content[0].text).toBe("Free/busy information retrieved for 1 calendar(s) and 0 group(s).");
-      expect(result.data).toEqual(fakeResponse.data);
+      expect(result.content[0].text).toBe("Cannot check availability for test@gmail.com (account not found)");
     });
 
     it('should throw ZodError if required args are missing', async () => {
@@ -594,7 +600,7 @@ describe('Google Calendar MCP Tool Calls', () => {
         freebusy: { query: vi.fn().mockResolvedValue(fakeResponse) },
       });
 
-      await expect(handler.runTool(invalidArgs, {} as any)).rejects.toThrow(`Invalid arguments Error: [{"code":"invalid_type","expected":"string","received":"undefined","path":["timeMin"],"message":"Required"},{"code":"invalid_type","expected":"string","received":"undefined","path":["timeMax"],"message":"Required"}]`);
+      await expect(handler.runTool(invalidArgs, {} as any)).rejects.toThrow(`Invalid arguments Error: [{"code":"invalid_type","expected":"string","received":"undefined","path":["timeMin"],"message":"Required"},{"code":"invalid_type","expected":"string","received":"undefined","path":["timeMax"],"message":"Required"},{"validation":"email","code":"invalid_string","message":"Must be a valid email address","path":["items",0,"id"]}]`);
     });
   // TODO: Add more tests for:
   // - Argument validation failures for other tools

@@ -95,6 +95,6 @@ export const FreeBusyEventArgumentsSchema = z.object({
   groupExpansionMax: z.number().int().max(100).optional(),
   calendarExpansionMax: z.number().int().max(50).optional(),
   items: z.array(z.object({
-    id: z.string(),
-  })).optional(),
+    id: z.string().email("Must be a valid email address"),
+  })),
 });
