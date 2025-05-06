@@ -11,12 +11,15 @@ import type * as FsPromises from 'fs/promises';
 import type { Server as MCPServerType } from '@modelcontextprotocol/sdk/server/index.js';
 import type { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { TokenManager } from './auth/tokenManager.js';
+import { FreeBusyEventHandler } from '../src/handlers/core/FreeBusyEventHandler.js';
+import { z } from 'zod';
 
 // --- Mocks ---
 
 // Mock process.exit
 const mockProcessExit = vi.spyOn(process, 'exit').mockImplementation((() => {}) as (code?: number) => never);
 
+const mockClient = {} as unknown as OAuth2Client;
 // Mock googleapis
 vi.mock('googleapis', async (importOriginal) => {
   const actual = await importOriginal<typeof GoogleApis>();
@@ -139,14 +142,14 @@ describe('Google Calendar MCP Tool Calls', () => {
     // Setup mocks needed JUST for main() to run without errors
     const mockKeys = JSON.stringify({ installed: { client_id: 'mock', client_secret: 'mock', redirect_uris: ['mock'] } });
     const mockTokens = JSON.stringify({ access_token: 'mock', refresh_token: 'mock', expiry_date: Date.now() + 999999 });
-    
+
     // Make the mock return sequentially
     (fs.readFile as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce(mockKeys) // For initializeOAuth2Client
         .mockResolvedValue(mockTokens);  // For subsequent calls like loadSavedTokens
-        
+
     (fs.access as ReturnType<typeof vi.fn>).mockResolvedValue(true);
-    
+
     // Make sure validateTokens returns true for setup
     mockValidateTokens.mockResolvedValue(true);
     mockProcessExit.mockClear(); // Clear exit mock before running main
@@ -159,7 +162,7 @@ describe('Google Calendar MCP Tool Calls', () => {
         // Dynamically get the actual schema object after mocks ran
         const { CallToolRequestSchema } = await import('@modelcontextprotocol/sdk/types.js');
         callToolHandler = server.capturedHandlerMap.get(CallToolRequestSchema);
-    } 
+    }
 
     if (!callToolHandler) {
         console.error('capturedHandlerMap on server instance:', server?.capturedHandlerMap);
@@ -174,10 +177,10 @@ describe('Google Calendar MCP Tool Calls', () => {
 
     // IMPORTANT: Re-apply default mock implementations needed for the tests
     mockCalendarApi = google.calendar('v3') as unknown as ReturnType<GoogleApis['calendar']>;
-    
+
     // Ensure validateTokens returns true for each test
     mockValidateTokens.mockResolvedValue(true);
-    
+
     (fs.access as ReturnType<typeof vi.fn>).mockResolvedValue(true); // Assume token file access ok
     // readFile needs to be mocked specifically if a test case needs it beyond initialization
     (fs.readFile as ReturnType<typeof vi.fn>).mockClear(); // Clear initial readFile mocks
@@ -196,7 +199,7 @@ describe('Google Calendar MCP Tool Calls', () => {
 
     // Act & Assert: Expect the handler to reject because we mocked validateTokens to return false
     if (!callToolHandler) throw new Error('callToolHandler not captured');
-    await expect(callToolHandler(request)).rejects.toThrow("Authentication required. Please run 'npm run auth' to authenticate."); 
+    await expect(callToolHandler(request)).rejects.toThrow("Authentication required. Please run 'npm run auth' to authenticate.");
   });
 
   it('should handle "list-calendars" tool call', async () => {
@@ -457,14 +460,14 @@ describe('Google Calendar MCP Tool Calls', () => {
             eventId: 'eventToUpdate123',
             summary: 'Updated Team Meeting',
             location: 'New Conference Room',
-            start: '2024-08-15T10:30:00-07:00', 
+            start: '2024-08-15T10:30:00-07:00',
             // Missing end, but timezone provided
             timeZone: 'America/Los_Angeles',
             colorId: '9',
         };
         const mockApiResponse = {
             id: updateEventArgs.eventId,
-            summary: updateEventArgs.summary, 
+            summary: updateEventArgs.summary,
             location: updateEventArgs.location,
             start: { dateTime: updateEventArgs.start, timeZone: updateEventArgs.timeZone },
             colorId: updateEventArgs.colorId
@@ -496,7 +499,7 @@ describe('Google Calendar MCP Tool Calls', () => {
         });
         expect(result.content[0].text).toBe(`Event updated: ${mockApiResponse.summary} (${mockApiResponse.id})`);
     });
-    
+
      it('should handle "update-event" argument validation failure (missing eventId)', async () => {
         // Arrange: Missing 'eventId' which is required
         const invalidEventArgs = {
@@ -521,26 +524,84 @@ describe('Google Calendar MCP Tool Calls', () => {
       // Arrange
       mockValidateTokens.mockReset();
       mockValidateTokens.mockResolvedValueOnce(true);
-      
+
       const request = {
         params: {
           name: 'list-calendars',
           arguments: {},
         },
       };
-      
+
       // Mock the calendar list call
       (mockCalendarApi.calendarList.list as ReturnType<typeof vi.fn>).mockResolvedValue({
         data: { items: [] },
       });
-      
+
       // Act
       await callToolHandler(request);
-      
+
       // Assert
       expect(mockValidateTokens).toHaveBeenCalledTimes(1);
     });
 
+    it('should handle "get-freebusy" tool call', async () => {
+      const handler = new FreeBusyEventHandler();
+
+      const validArgs = {
+        timeMin: '2025-04-25T00:00:00Z',
+        timeMax: '2025-04-25T23:59:59Z',
+        timeZone: 'UTC',
+        items: [{ id: 'test@gmail.com' }],
+      };
+
+      const fakeResponse = {
+        data: {
+          calendars: {
+            "test@gmail.com" : {
+              "errors": [
+                {
+                  "domain": "global",
+                  "reason": "notFound"
+                }
+              ]
+            },
+          },
+          groups: {},
+        },
+      };
+
+      vi.spyOn(handler as any, 'getCalendar').mockReturnValue({
+        freebusy: { query: vi.fn().mockResolvedValue(fakeResponse) },
+      });
+
+      const result = await handler.runTool(validArgs, {} as any);
+
+      expect(result.content[0].text).toBe("Cannot check availability for test@gmail.com (account not found)");
+    });
+
+    it('should throw ZodError if required args are missing', async () => {
+      const handler = new FreeBusyEventHandler();
+
+      const invalidArgs = {
+        // Intentionally missing `timeMin` or `timeMax`
+        items: [{ id: 'primary' }],
+      };
+
+      const fakeResponse = {
+        data: {
+          calendars: {
+            primary: { busy: [] },
+          },
+          groups: {},
+        },
+      };
+
+      vi.spyOn(handler as any, 'getCalendar').mockReturnValue({
+        freebusy: { query: vi.fn().mockResolvedValue(fakeResponse) },
+      });
+
+      await expect(handler.runTool(invalidArgs, {} as any)).rejects.toThrow(`Invalid arguments Error: [{"code":"invalid_type","expected":"string","received":"undefined","path":["timeMin"],"message":"Required"},{"code":"invalid_type","expected":"string","received":"undefined","path":["timeMax"],"message":"Required"},{"validation":"email","code":"invalid_string","message":"Must be a valid email address","path":["items",0,"id"]}]`);
+    });
   // TODO: Add more tests for:
   // - Argument validation failures for other tools
-}); 
+});

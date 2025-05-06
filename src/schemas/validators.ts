@@ -30,7 +30,7 @@ export const SearchEventsArgumentsSchema = z.object({
   query: z.string(),
   timeMin: z.string()
     .regex(isoDateTimeWithTimezone, "Must be ISO format with timezone (e.g., 2024-01-01T00:00:00Z)")
-    .optional(), 
+    .optional(),
   timeMax: z.string()
     .regex(isoDateTimeWithTimezone, "Must be ISO format with timezone (e.g., 2024-12-31T23:59:59Z)")
     .optional(),
@@ -40,7 +40,7 @@ export const CreateEventArgumentsSchema = z.object({
   calendarId: z.string(),
   summary: z.string(),
   description: z.string().optional(),
-  start: z.string().regex(isoDateTimeWithTimezone, "Must be ISO format with timezone (e.g., 2024-01-01T00:00:00Z)"), 
+  start: z.string().regex(isoDateTimeWithTimezone, "Must be ISO format with timezone (e.g., 2024-01-01T00:00:00Z)"),
   end: z.string().regex(isoDateTimeWithTimezone, "Must be ISO format with timezone (e.g., 2024-01-01T00:00:00Z)"),
   timeZone: z.string(),
   attendees: z
@@ -84,4 +84,17 @@ export const UpdateEventArgumentsSchema = z.object({
 export const DeleteEventArgumentsSchema = z.object({
   calendarId: z.string(),
   eventId: z.string(),
-}); 
+});
+
+export const FreeBusyEventArgumentsSchema = z.object({
+  timeMin: z.string()
+    .regex(isoDateTimeWithTimezone, "Must be ISO format with timezone (e.g., 2024-01-01T00:00:00Z)"),
+  timeMax: z.string()
+    .regex(isoDateTimeWithTimezone, "Must be ISO format with timezone (e.g., 2024-01-01T00:00:00Z)"),
+  timeZone: z.string().optional(),
+  groupExpansionMax: z.number().int().max(100).optional(),
+  calendarExpansionMax: z.number().int().max(50).optional(),
+  items: z.array(z.object({
+    id: z.string().email("Must be a valid email address"),
+  })),
+});
