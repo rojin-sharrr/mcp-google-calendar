@@ -78,6 +78,33 @@ describe('Batch List Events Functionality', () => {
       expect(result.data?.calendarId).toHaveLength(3);
     });
 
+    it('should parse JSON string array of calendar IDs', () => {
+      // This tests the fix for when clients send JSON strings instead of arrays
+      const input = {
+        calendarId: '["primary", "work@example.com", "personal@example.com"]',
+        timeMin: '2024-01-01T00:00:00Z'
+      };
+
+      const result = ListEventsArgumentsSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      expect(Array.isArray(result.data?.calendarId)).toBe(true);
+      expect(result.data?.calendarId).toEqual(['primary', 'work@example.com', 'personal@example.com']);
+      expect(result.data?.calendarId).toHaveLength(3);
+    });
+
+    it('should handle malformed JSON string gracefully', () => {
+      // Test that malformed JSON is treated as a regular string
+      const input = {
+        calendarId: '["primary", "work@example.com"', // Missing closing bracket
+        timeMin: '2024-01-01T00:00:00Z'
+      };
+
+      const result = ListEventsArgumentsSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      expect(typeof result.data?.calendarId).toBe('string');
+      expect(result.data?.calendarId).toBe('["primary", "work@example.com"');
+    });
+
     it('should reject empty calendar ID array', () => {
       const input = {
         calendarId: [],
