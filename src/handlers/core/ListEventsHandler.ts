@@ -87,7 +87,7 @@ export class ListEventsHandler extends BaseToolHandler {
         
         const responses = await batchHandler.executeBatch(requests);
         
-        const { events, errors } = this.processeBatchResponses(responses, calendarIds);
+        const { events, errors } = this.processBatchResponses(responses, calendarIds);
         
         if (errors.length > 0) {
             console.warn("Some calendars had errors:", errors.map(e => `${e.calendarId}: ${e.error}`));
@@ -107,7 +107,7 @@ export class ListEventsHandler extends BaseToolHandler {
         return `/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params.toString()}`;
     }
 
-    private processeBatchResponses(
+    private processBatchResponses(
         responses: any[], 
         calendarIds: string[]
     ): { events: ExtendedEvent[]; errors: Array<{ calendarId: string; error: string }> } {

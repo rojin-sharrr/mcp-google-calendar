@@ -2,34 +2,42 @@
 
 This is a Model Context Protocol (MCP) server that provides integration with Google Calendar. It allows LLMs to read, create, update and search for calendar events through a standardized interface.
 
+## Features
+
+- **Multi-Calendar Support**: List events from multiple calendars simultaneously
+- **Event Management**: Create, update, delete, and search calendar events
+- **Calendar Management**: List calendars and their properties
+- **Free/Busy Queries**: Check availability across calendars
+
 ## Example Usage
 
 Along with the normal capabilities you would expect for a calendar integration you can also do really dynamic, multi-step processes like:
 
-1. Add events from screenshots and images:
+1. **Cross-calendar availability**:
+   ```
+   Please provide availability looking at both my personal and work calendar for this upcoming week.
+   Choose times that work well for normal working hours on the East Coast. Meeting time is 1 hour
+   ```
+
+2. Add events from screenshots, images and other data sources:
    ```
    Add this event to my calendar based on the attached screenshot.
    ```
    Supported image formats: PNG, JPEG, GIF
    Images can contain event details like date, time, location, and description
 
-2. Calendar analysis:
+3. Calendar analysis:
    ```
    What events do I have coming up this week that aren't part of my usual routine?
    ```
-3. Check attendance:
+4. Check attendance:
    ```
    Which events tomorrow have attendees who have not accepted the invitation?
    ```
-4. Auto coordinate events:
+5. Auto coordinate events:
    ```
    Here's some available that was provided to me by someone.
    Take a look at the available times and create an event that is free on my work calendar.
-   ```
-5. Provide your own availability:
-   ```
-   Please provide availability looking at both my personal and work calendar for this upcoming week.
-   Choose times that work well for normal working hours on the East Coast. Meeting time is 1 hour
    ```
 
 ## Requirements
