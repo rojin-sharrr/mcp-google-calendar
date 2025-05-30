@@ -47,13 +47,27 @@ export function getToolDefinitions() {
       },
       {
         name: "list-events",
-        description: "List events from a calendar",
+        description: "List events from one or more calendars",
         inputSchema: {
           type: "object",
           properties: {
             calendarId: {
-              type: "string",
-              description: "ID of the calendar to list events from (use 'primary' for the main calendar)",
+              oneOf: [
+                {
+                  type: "string",
+                  description: "ID of a single calendar"
+                },
+                {
+                  type: "array",
+                  description: "Array of calendar IDs",
+                  items: {
+                    type: "string"
+                  },
+                  minItems: 1,
+                  maxItems: 50
+                }
+              ],
+              description: "ID of the calendar(s) to list events from (use 'primary' for the main calendar)",
             },
             timeMin: {
               type: "string",

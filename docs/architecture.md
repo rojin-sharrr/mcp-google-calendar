@@ -1,4 +1,4 @@
-# Overview
+# Architecture Overview
 
 ## BaseToolHandler
 
@@ -10,28 +10,50 @@ The `BaseToolHandler` class provides a foundation for all tool handlers in this 
 
 By extending `BaseToolHandler`, each tool handler benefits from consistent error handling and a standardized structure, promoting code reusability and maintainability.  This approach ensures that all handlers adhere to a common pattern for interacting with the Google Calendar API and managing authentication.
 
+## BatchRequestHandler
+
+The `BatchRequestHandler` class provides efficient multi-calendar support through Google's batch API:
+
+- **Batch Processing:** Combines multiple API requests into a single HTTP request for improved performance
+- **Multipart Handling:** Creates and parses multipart/mixed request and response bodies 
+- **Error Resilience:** Implements retry logic with exponential backoff for rate limiting and network errors
+- **Response Processing:** Handles mixed success/failure responses from batch requests
+- **Validation:** Enforces Google's 50-request batch limit and proper request formatting
+
+This approach significantly reduces API calls when querying multiple calendars, improving both performance and reliability.
+
 ### How ListEventsHandler Uses BaseToolHandler
 
-The `ListEventsHandler` extends the `BaseToolHandler` to inherit its common functionalities. Specifically, this inheritance promotes code reuse and maintainability, as common functionalities are centralized in the `BaseToolHandler` class.
-
-Here is an example from `ListEventsHandler`
+The `ListEventsHandler` extends the `BaseToolHandler` to inherit its common functionalities and implements multi-calendar support:
 
 ```typescript
 export class ListEventsHandler extends BaseToolHandler {
     async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
         const validArgs = ListEventsArgumentsSchema.parse(args);
-        const events = await this.listEvents(oauth2Client, validArgs);
+        
+        // Normalize calendarId to always be an array for consistent processing
+        const calendarIds = Array.isArray(validArgs.calendarId) 
+            ? validArgs.calendarId 
+            : [validArgs.calendarId];
+        
+        const allEvents = await this.fetchEvents(oauth2Client, calendarIds, {
+            timeMin: validArgs.timeMin,
+            timeMax: validArgs.timeMax
+        });
+        
         return {
             content: [{
                 type: "text",
-                text: this.formatEventList(events),
+                text: this.formatEventList(allEvents, calendarIds),
             }],
         };
     }
 
-    // Additional helper methods...
+    // Additional helper methods for single vs batch processing...
 }
 ```
+
+The handler automatically chooses between single API calls and batch processing based on the number of calendars requested, providing optimal performance for both scenarios.
 
 ### Registration with handlerMap
 

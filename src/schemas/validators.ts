@@ -16,14 +16,36 @@ export const RemindersSchema = z.object({
 const isoDateTimeWithTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/;
 
 export const ListEventsArgumentsSchema = z.object({
-  calendarId: z.string(),
+  calendarId: z.union([
+    z.string().min(1, "Calendar ID cannot be empty"),
+    z.array(z.string().min(1, "Calendar ID cannot be empty"))
+      .min(1, "At least one calendar ID is required")
+      .max(50, "Maximum 50 calendars allowed per request")
+      .refine(
+        (ids) => new Set(ids).size === ids.length,
+        "Duplicate calendar IDs are not allowed"
+      )
+  ]).describe("Calendar ID(s) to fetch events from"),
   timeMin: z.string()
     .regex(isoDateTimeWithTimezone, "Must be ISO format with timezone (e.g., 2024-01-01T00:00:00Z)")
-    .optional(),
+    .optional()
+    .describe("Start time for event filtering"),
   timeMax: z.string()
-    .regex(isoDateTimeWithTimezone, "Must be ISO format with timezone (e.g., 2024-12-31T23:59:59Z)")
-    .optional(),
-});
+    .regex(isoDateTimeWithTimezone, "Must be ISO format with timezone (e.g., 2024-01-01T00:00:00Z)")
+    .optional()
+    .describe("End time for event filtering"),
+}).refine(
+  (data) => {
+    if (data.timeMin && data.timeMax) {
+      return new Date(data.timeMin) < new Date(data.timeMax);
+    }
+    return true;
+  },
+  {
+    message: "timeMin must be before timeMax",
+    path: ["timeMax"]
+  }
+);
 
 export const SearchEventsArgumentsSchema = z.object({
   calendarId: z.string(),
