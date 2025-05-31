@@ -6,6 +6,7 @@ This is a Model Context Protocol (MCP) server that provides integration with Goo
 
 - **Multi-Calendar Support**: List events from multiple calendars simultaneously
 - **Event Management**: Create, update, delete, and search calendar events
+- **Recurring Events**: Advanced modification scopes for recurring events (single instance, all instances, or future instances only)
 - **Calendar Management**: List calendars and their properties
 - **Free/Busy Queries**: Check availability across calendars
 

@@ -22,6 +22,23 @@ The `BatchRequestHandler` class provides efficient multi-calendar support throug
 
 This approach significantly reduces API calls when querying multiple calendars, improving both performance and reliability.
 
+## RecurringEventHelpers
+
+The `RecurringEventHelpers` class provides specialized functionality for managing recurring calendar events:
+
+- **Event Type Detection:** Identifies whether an event is recurring or single-occurrence
+- **Instance ID Formatting:** Generates proper Google Calendar instance IDs for single occurrence modifications
+- **Series Splitting:** Implements the complex logic for splitting recurring series with UNTIL clauses
+- **Duration Preservation:** Maintains event duration across timezone changes and modifications
+- **RRULE Processing:** Handles recurrence rule updates while preserving EXDATE and RDATE patterns
+
+The `UpdateEventHandler` has been enhanced to support three modification scopes:
+- **Single Instance:** Modifies one occurrence using instance IDs
+- **All Instances:** Updates the master event (default behavior for backward compatibility)  
+- **Future Instances:** Splits the series and creates a new recurring event from a specified date forward
+
+This architecture maintains full backward compatibility while providing advanced recurring event management capabilities.
+
 ### How ListEventsHandler Uses BaseToolHandler
 
 The `ListEventsHandler` extends the `BaseToolHandler` to inherit its common functionalities and implements multi-calendar support:
