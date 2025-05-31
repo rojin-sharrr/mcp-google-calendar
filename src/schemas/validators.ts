@@ -115,7 +115,53 @@ export const UpdateEventArgumentsSchema = z.object({
   colorId: z.string().optional(),
   reminders: RemindersSchema.optional(),
   recurrence: z.array(z.string()).optional(),
-});
+  // New recurring event parameters
+  modificationScope: z.enum(['single', 'all', 'future']).default('all'),
+  originalStartTime: z.string()
+    .regex(isoDateTimeWithTimezone, "Must be ISO format with timezone (e.g., 2024-01-01T00:00:00Z)")
+    .optional(),
+  futureStartDate: z.string()
+    .regex(isoDateTimeWithTimezone, "Must be ISO format with timezone (e.g., 2024-01-01T00:00:00Z)")
+    .optional(),
+}).refine(
+  (data) => {
+    // Require originalStartTime when modificationScope is 'single'
+    if (data.modificationScope === 'single' && !data.originalStartTime) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "originalStartTime is required when modificationScope is 'single'",
+    path: ["originalStartTime"]
+  }
+).refine(
+  (data) => {
+    // Require futureStartDate when modificationScope is 'future'
+    if (data.modificationScope === 'future' && !data.futureStartDate) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "futureStartDate is required when modificationScope is 'future'",
+    path: ["futureStartDate"]
+  }
+).refine(
+  (data) => {
+    // Ensure futureStartDate is in the future when provided
+    if (data.futureStartDate) {
+      const futureDate = new Date(data.futureStartDate);
+      const now = new Date();
+      return futureDate > now;
+    }
+    return true;
+  },
+  {
+    message: "futureStartDate must be in the future",
+    path: ["futureStartDate"]
+  }
+);
 
 export const DeleteEventArgumentsSchema = z.object({
   calendarId: z.string(),
