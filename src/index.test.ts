@@ -32,6 +32,7 @@ vi.mock('googleapis', async (importOriginal) => {
         },
         events: {
           list: vi.fn(),
+          get: vi.fn(),
           insert: vi.fn(),
           patch: vi.fn(),
           delete: vi.fn()
@@ -39,6 +40,9 @@ vi.mock('googleapis', async (importOriginal) => {
         colors: {
           get: vi.fn()
         },
+        freebusy: {
+          query: vi.fn()
+        }
       })
     }
   };
@@ -465,6 +469,15 @@ describe('Google Calendar MCP Tool Calls', () => {
             timeZone: 'America/Los_Angeles',
             colorId: '9',
         };
+        
+        // Mock the event.get call for detectEventType (single event - no recurrence)
+        const mockEventData = {
+            id: updateEventArgs.eventId,
+            summary: 'Original Meeting',
+            // No recurrence property means it's a single event
+        };
+        (mockCalendarApi.events.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: mockEventData });
+        
         const mockApiResponse = {
             id: updateEventArgs.eventId,
             summary: updateEventArgs.summary,
@@ -486,6 +499,13 @@ describe('Google Calendar MCP Tool Calls', () => {
         const result = await callToolHandler(request);
 
         // Assert
+        // First, detectEventType should call events.get
+        expect(mockCalendarApi.events.get).toHaveBeenCalledWith({
+            calendarId: updateEventArgs.calendarId,
+            eventId: updateEventArgs.eventId
+        });
+        
+        // Then updateAllInstances should call events.patch
         expect(mockCalendarApi.events.patch).toHaveBeenCalledWith({
             calendarId: updateEventArgs.calendarId,
             eventId: updateEventArgs.eventId,

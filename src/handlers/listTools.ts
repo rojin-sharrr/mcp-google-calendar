@@ -191,7 +191,7 @@ export function getToolDefinitions() {
       },
       {
         name: "update-event",
-        description: "Update an existing calendar event",
+        description: "Update an existing calendar event with recurring event modification scope support",
         inputSchema: {
           type: "object",
           properties: {
@@ -261,8 +261,46 @@ export function getToolDefinitions() {
                 type: "string"
               }
             },
+            modificationScope: {
+              type: "string",
+              enum: ["single", "all", "future"],
+              default: "all",
+              description: "Scope of modification for recurring events: 'single' (one instance), 'all' (entire series), 'future' (this and future instances). Defaults to 'all' for backward compatibility."
+            },
+            originalStartTime: {
+              type: "string",
+              format: "date-time",
+              description: "Required when modificationScope is 'single'. Original start time of the specific instance to modify in ISO format with timezone (e.g., 2024-08-15T10:00:00-07:00)."
+            },
+            futureStartDate: {
+              type: "string", 
+              format: "date-time",
+              description: "Required when modificationScope is 'future'. Start date for future modifications in ISO format with timezone (e.g., 2024-08-20T10:00:00-07:00). Must be a future date."
+            }
           },
           required: ["calendarId", "eventId", "timeZone"], // timeZone is technically required for PATCH
+          allOf: [
+            {
+              if: { 
+                properties: { 
+                  modificationScope: { const: "single" } 
+                } 
+              },
+              then: { 
+                required: ["originalStartTime"] 
+              }
+            },
+            {
+              if: { 
+                properties: { 
+                  modificationScope: { const: "future" } 
+                } 
+              },
+              then: { 
+                required: ["futureStartDate"] 
+              }
+            }
+          ]
         },
       },
       {
