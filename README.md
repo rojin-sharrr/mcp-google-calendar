@@ -69,7 +69,7 @@ Along with the normal capabilities you would expect for a calendar integration y
 
 ### Option 1: Use with npx (Recommended)
 
-**Important**: When using npx, you **must** specify the credentials file path using either the `--credentials-file` parameter or the `GOOGLE_OAUTH_CREDENTIALS_FILE` environment variable.
+**Important**: When using npx, you **must** specify the credentials file path using either the `--credentials-file` parameter or the `GOOGLE_OAUTH_CREDENTIALS` environment variable.
 
 1. **Add to Claude Desktop**: Edit your Claude Desktop configuration file:
    
@@ -82,7 +82,7 @@ Along with the normal capabilities you would expect for a calendar integration y
      "mcpServers": {
        "google-calendar": {
          "command": "npx",
-         "args": ["@nspady/google-calendar-mcp", "start", "--credentials-file", "/path/to/your/gcp-oauth.keys.json"]
+         "args": ["@cocal/google-calendar-mcp"]
        }
      }
    }
@@ -94,9 +94,9 @@ Along with the normal capabilities you would expect for a calendar integration y
      "mcpServers": {
        "google-calendar": {
          "command": "npx",
-         "args": ["@nspady/google-calendar-mcp", "start"],
+         "args": ["@cocal/google-calendar-mcp"],
          "env": {
-           "GOOGLE_OAUTH_CREDENTIALS_FILE": "/path/to/your/gcp-oauth.keys.json"
+           "GOOGLE_OAUTH_CREDENTIALS": "/path/to/your/gcp-oauth.keys.json"
          }
        }
      }
@@ -123,7 +123,7 @@ Along with the normal capabilities you would expect for a calendar integration y
 
    **Option B: Custom file location**
    - Place your credentials file anywhere on your system
-   - Use the `--credentials-file` parameter or `GOOGLE_OAUTH_CREDENTIALS_FILE` environment variable to specify the path
+   - Use the `--credentials-file` parameter or `GOOGLE_OAUTH_CREDENTIALS` environment variable to specify the path
 
 4. **Add configuration to your Claude Desktop config file:**
 
@@ -163,7 +163,7 @@ Along with the normal capabilities you would expect for a calendar integration y
          "command": "node",
          "args": ["<absolute-path-to-project-folder>/build/index.js"],
          "env": {
-           "GOOGLE_OAUTH_CREDENTIALS_FILE": "/path/to/your/credentials.json"
+           "GOOGLE_OAUTH_CREDENTIALS": "/path/to/your/credentials.json"
          }
        }
      }
@@ -193,7 +193,7 @@ The server supports multiple methods for providing OAuth credentials, with a pri
 The server searches for OAuth credentials in the following order:
 
 1. **CLI Parameter** (Highest Priority): `--credentials-file` parameter
-2. **Environment Variable**: `GOOGLE_OAUTH_CREDENTIALS_FILE` environment variable
+2. **Environment Variable**: `GOOGLE_OAUTH_CREDENTIALS` environment variable
 3. **Default File** (Lowest Priority): `gcp-oauth.keys.json` in the current working directory
 
 ### Configuration Methods
@@ -203,22 +203,22 @@ Use the `--credentials-file` parameter to specify a custom path to your OAuth cr
 
 ```bash
 # For authentication
-npx @nspady/google-calendar-mcp auth --credentials-file /path/to/your/credentials.json
+npx @cocal/google-calendar-mcp auth --credentials-file /path/to/your/credentials.json
 
 # For starting the server
-npx @nspady/google-calendar-mcp start --credentials-file /path/to/your/credentials.json
+npx @cocal/google-calendar-mcp start --credentials-file /path/to/your/credentials.json
 ```
 
 #### Method 2: Environment Variable
-Set the `GOOGLE_OAUTH_CREDENTIALS_FILE` environment variable:
+Set the `GOOGLE_OAUTH_CREDENTIALS` environment variable:
 
 ```bash
 # Set environment variable
-export GOOGLE_OAUTH_CREDENTIALS_FILE="/path/to/your/credentials.json"
+export GOOGLE_OAUTH_CREDENTIALS="/path/to/your/credentials.json"
 
 # Then run normally
-npx @nspady/google-calendar-mcp auth
-npx @nspady/google-calendar-mcp start
+npx @cocal/google-calendar-mcp auth
+npx @cocal/google-calendar-mcp start
 ```
 
 #### Method 3: Default File
@@ -235,7 +235,7 @@ Choose one of these configuration methods based on your preference:
     "google-calendar": {
       "command": "npx",
       "args": [
-        "@nspady/google-calendar-mcp",
+        "@cocal/google-calendar-mcp",
         "start",
         "--credentials-file",
         "/Users/yourname/Documents/my-google-credentials.json"
@@ -251,9 +251,9 @@ Choose one of these configuration methods based on your preference:
   "mcpServers": {
     "google-calendar": {
       "command": "npx",
-      "args": ["@nspady/google-calendar-mcp", "start"],
+      "args": ["@cocal/google-calendar-mcp", "start"],
       "env": {
-        "GOOGLE_OAUTH_CREDENTIALS_FILE": "/Users/yourname/Documents/my-google-credentials.json"
+        "GOOGLE_OAUTH_CREDENTIALS": "/Users/yourname/Documents/my-google-credentials.json"
       }
     }
   }
@@ -270,7 +270,7 @@ The server handles Google OAuth 2.0 authentication to access your calendar data.
 
 1. **Ensure OAuth credentials are available** using one of the supported methods:
    - CLI parameter: `--credentials-file /path/to/credentials.json`
-   - Environment variable: `GOOGLE_OAUTH_CREDENTIALS_FILE=/path/to/credentials.json`
+   - Environment variable: `GOOGLE_OAUTH_CREDENTIALS=/path/to/credentials.json`
    - Default file: `gcp-oauth.keys.json` in the working directory
 
 2. **Start the MCP server** using your chosen method from the installation section above.
@@ -294,14 +294,14 @@ If you need to re-authenticate or prefer to handle authentication separately:
 **For npx installations:**
 ```bash
 # Using default credentials file location
-npx @nspady/google-calendar-mcp auth
+npx @cocal/google-calendar-mcp auth
 
 # Using custom credentials file path
-npx @nspady/google-calendar-mcp auth --credentials-file /path/to/your/credentials.json
+npx @cocal/google-calendar-mcp auth --credentials-file /path/to/your/credentials.json
 
 # Using environment variable
-export GOOGLE_OAUTH_CREDENTIALS_FILE="/path/to/your/credentials.json"
-npx @nspady/google-calendar-mcp auth
+export GOOGLE_OAUTH_CREDENTIALS="/path/to/your/credentials.json"
+npx @cocal/google-calendar-mcp auth
 ```
 
 **For local installations:**
@@ -319,10 +319,17 @@ npm run auth
 
 ### Token Management
 
-- Authentication tokens are stored in `.gcp-saved-tokens.json` in the project root.
-- This file is created automatically and should **not** be committed to version control (it's included in `.gitignore`).
-- The server attempts to automatically refresh expired access tokens using the stored refresh token.
-- If the refresh token itself expires (e.g., after 7 days if the Google Cloud app is in testing mode) or is revoked, you will need to re-authenticate using either the automatic flow (by restarting the server) or the manual `npm run auth` command.
+- **Authentication tokens are stored in `~/.config/google-calendar-mcp/tokens.json`** following the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html) (a cross-platform standard for organizing user configuration files)
+- On systems without XDG support, tokens are stored in `~/.config/google-calendar-mcp/tokens.json` 
+- **Custom token location**: Set `GOOGLE_CALENDAR_MCP_TOKEN_PATH` environment variable to use a different location
+- Token files are created automatically with secure permissions (600) and should **not** be committed to version control
+- The server attempts to automatically refresh expired access tokens using the stored refresh token
+- If the refresh token itself expires (e.g., after 7 days if the Google Cloud app is in testing mode) or is revoked, you will need to re-authenticate using either the automatic flow (by restarting the server) or the manual `npm run auth` command
+
+#### Token Storage Priority
+1. **Custom path**: `GOOGLE_CALENDAR_MCP_TOKEN_PATH` environment variable (highest priority)
+2. **XDG Config**: `$XDG_CONFIG_HOME/google-calendar-mcp/tokens.json` if XDG_CONFIG_HOME is set
+3. **Default**: `~/.config/google-calendar-mcp/tokens.json` (lowest priority)
 
 ## Testing
 
@@ -353,14 +360,14 @@ Tests mock external dependencies (Google API, filesystem) to ensure isolated tes
    **Option A: Use CLI Parameter (Recommended for npx)**
    ```bash
    # For authentication
-   npx @nspady/google-calendar-mcp auth --credentials-file /path/to/your/credentials.json
+   npx @cocal/google-calendar-mcp auth --credentials-file /path/to/your/credentials.json
    
    # Update Claude Desktop config to use CLI parameter:
    {
      "mcpServers": {
        "google-calendar": {
          "command": "npx",
-         "args": ["@nspady/google-calendar-mcp", "start", "--credentials-file", "/path/to/your/credentials.json"]
+         "args": ["@cocal/google-calendar-mcp", "start", "--credentials-file", "/path/to/your/credentials.json"]
        }
      }
    }
@@ -369,16 +376,16 @@ Tests mock external dependencies (Google API, filesystem) to ensure isolated tes
    **Option B: Use Environment Variable**
    ```bash
    # Set environment variable
-   export GOOGLE_OAUTH_CREDENTIALS_FILE="/path/to/your/credentials.json"
+   export GOOGLE_OAUTH_CREDENTIALS="/path/to/your/credentials.json"
    
    # Update Claude Desktop config to use environment variable:
    {
      "mcpServers": {
        "google-calendar": {
          "command": "npx",
-         "args": ["@nspady/google-calendar-mcp", "start"],
+         "args": ["@cocal/google-calendar-mcp", "start"],
          "env": {
-           "GOOGLE_OAUTH_CREDENTIALS_FILE": "/path/to/your/credentials.json"
+           "GOOGLE_OAUTH_CREDENTIALS": "/path/to/your/credentials.json"
          }
        }
      }
