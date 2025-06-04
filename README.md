@@ -67,14 +67,112 @@ Along with the normal capabilities you would expect for a calendar integration y
 
 ## Installation
 
+### Option 1: Use with npx (Recommended)
+
+**Important**: When using npx, you **must** specify the credentials file path using either the `--credentials-file` parameter or the `GOOGLE_OAUTH_CREDENTIALS_FILE` environment variable.
+
+1. **Add to Claude Desktop**: Edit your Claude Desktop configuration file:
+   
+   **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+   **Method A: Using --credentials-file parameter (Recommended)**:
+   ```json
+   {
+     "mcpServers": {
+       "google-calendar": {
+         "command": "npx",
+         "args": ["@nspady/google-calendar-mcp", "start", "--credentials-file", "/path/to/your/gcp-oauth.keys.json"]
+       }
+     }
+   }
+   ```
+
+   **Method B: Using environment variable**:
+   ```json
+   {
+     "mcpServers": {
+       "google-calendar": {
+         "command": "npx",
+         "args": ["@nspady/google-calendar-mcp", "start"],
+         "env": {
+           "GOOGLE_OAUTH_CREDENTIALS_FILE": "/path/to/your/gcp-oauth.keys.json"
+         }
+       }
+     }
+   }
+   ```
+
+2. **Restart Claude Desktop**
+
+### Option 2: Local Installation
+
 1. Clone the repository
 2. Install dependencies (this also builds the js via postinstall):
    ```bash
+   git clone https://github.com/nspady/google-calendar-mcp.git
+   cd google-calendar-mcp
    npm install
    ```
-3. Download your Google OAuth credentials from the Google Cloud Console (under "Credentials") and rename the file to `gcp-oauth.keys.json` and place it in the root directory of the project.
+3. **Configure OAuth credentials** using one of these methods:
+
+   **Option A: Default file location (Legacy)**
+   - Download your Google OAuth credentials from the Google Cloud Console (under "Credentials") and rename the file to `gcp-oauth.keys.json` and place it in the root directory of the project.
    - Ensure the file contains credentials for a "Desktop app".
    - Alternatively, copy the provided template file: `cp gcp-oauth.keys.example.json gcp-oauth.keys.json` and populate it with your credentials from the Google Cloud Console.
+
+   **Option B: Custom file location**
+   - Place your credentials file anywhere on your system
+   - Use the `--credentials-file` parameter or `GOOGLE_OAUTH_CREDENTIALS_FILE` environment variable to specify the path
+
+4. **Add configuration to your Claude Desktop config file:**
+
+   **Using default credentials file location:**
+   ```json
+   {
+     "mcpServers": {
+       "google-calendar": {
+         "command": "node",
+         "args": ["<absolute-path-to-project-folder>/build/index.js"]
+       }
+     }
+   }
+   ```
+
+   **Using custom credentials file path:**
+   ```json
+   {
+     "mcpServers": {
+       "google-calendar": {
+         "command": "node",
+         "args": [
+           "<absolute-path-to-project-folder>/build/index.js",
+           "--credentials-file",
+           "/path/to/your/credentials.json"
+         ]
+       }
+     }
+   }
+   ```
+
+   **Using environment variable:**
+   ```json
+   {
+     "mcpServers": {
+       "google-calendar": {
+         "command": "node",
+         "args": ["<absolute-path-to-project-folder>/build/index.js"],
+         "env": {
+           "GOOGLE_OAUTH_CREDENTIALS_FILE": "/path/to/your/credentials.json"
+         }
+       }
+     }
+   }
+   ```
+
+   Note: Replace `<absolute-path-to-project-folder>` with the actual path to your project directory.
+
+5. Restart Claude **Desktop**
 
 ## Available Scripts
 
@@ -86,33 +184,138 @@ Along with the normal capabilities you would expect for a calendar integration y
 - `npm run test:watch` - Run tests in watch mode
 - `npm run coverage` - Run tests and generate a coverage report
 
+## OAuth Credentials Configuration
+
+The server supports multiple methods for providing OAuth credentials, with a priority-based loading system:
+
+### Credential Loading Priority
+
+The server searches for OAuth credentials in the following order:
+
+1. **CLI Parameter** (Highest Priority): `--credentials-file` parameter
+2. **Environment Variable**: `GOOGLE_OAUTH_CREDENTIALS_FILE` environment variable
+3. **Default File** (Lowest Priority): `gcp-oauth.keys.json` in the current working directory
+
+### Configuration Methods
+
+#### Method 1: CLI Parameter
+Use the `--credentials-file` parameter to specify a custom path to your OAuth credentials file:
+
+```bash
+# For authentication
+npx @nspady/google-calendar-mcp auth --credentials-file /path/to/your/credentials.json
+
+# For starting the server
+npx @nspady/google-calendar-mcp start --credentials-file /path/to/your/credentials.json
+```
+
+#### Method 2: Environment Variable
+Set the `GOOGLE_OAUTH_CREDENTIALS_FILE` environment variable:
+
+```bash
+# Set environment variable
+export GOOGLE_OAUTH_CREDENTIALS_FILE="/path/to/your/credentials.json"
+
+# Then run normally
+npx @nspady/google-calendar-mcp auth
+npx @nspady/google-calendar-mcp start
+```
+
+#### Method 3: Default File
+Place your OAuth credentials file as `gcp-oauth.keys.json` in the current working directory (traditional method).
+
+### Claude Desktop Configuration Examples
+
+Choose one of these configuration methods based on your preference:
+
+**Option A: Using CLI Parameter (Recommended for npx)**
+```json
+{
+  "mcpServers": {
+    "google-calendar": {
+      "command": "npx",
+      "args": [
+        "@nspady/google-calendar-mcp",
+        "start",
+        "--credentials-file",
+        "/Users/yourname/Documents/my-google-credentials.json"
+      ]
+    }
+  }
+}
+```
+
+**Option B: Using Environment Variable**
+```json
+{
+  "mcpServers": {
+    "google-calendar": {
+      "command": "npx",
+      "args": ["@nspady/google-calendar-mcp", "start"],
+      "env": {
+        "GOOGLE_OAUTH_CREDENTIALS_FILE": "/Users/yourname/Documents/my-google-credentials.json"
+      }
+    }
+  }
+}
+```
+
+**⚠️ Important Note for npx Users**: When using npx, you **must** specify the credentials file path using either Option A (CLI parameter) or Option B (environment variable). The default file location method is not reliable with npx installations due to package caching behavior.
+
 ## Authentication
 
 The server handles Google OAuth 2.0 authentication to access your calendar data.
 
 ### Automatic Authentication Flow (During Server Start)
 
-1. Ensure `gcp-oauth.keys.json` is correctly named and placed in the project root.
-2. Start the MCP server: `npm start`.
-3. The server will check for existing, valid authentication tokens in `.gcp-saved-tokens.json`.
-4. If valid tokens are found, the server starts normally.
-5. If no valid tokens are found:
-   - The server attempts to start a temporary local web server (trying ports 3000-3004).
-   - Your default web browser will automatically open to the Google Account login and consent screen.
-   - Follow the prompts in the browser to authorize the application.
-   - Upon successful authorization, you will be redirected to a local page (e.g., `http://localhost:3000/oauth2callback`).
-   - This page will display a success message confirming that the tokens have been saved to `.gcp-saved-tokens.json` (and show the exact file path).
-   - The temporary auth server shuts down automatically.
-   - The main MCP server continues its startup process.
+1. **Ensure OAuth credentials are available** using one of the supported methods:
+   - CLI parameter: `--credentials-file /path/to/credentials.json`
+   - Environment variable: `GOOGLE_OAUTH_CREDENTIALS_FILE=/path/to/credentials.json`
+   - Default file: `gcp-oauth.keys.json` in the working directory
+
+2. **Start the MCP server** using your chosen method from the installation section above.
+
+3. **Authentication process:**
+   - The server will check for existing, valid authentication tokens in `.gcp-saved-tokens.json`.
+   - If valid tokens are found, the server starts normally.
+   - If no valid tokens are found:
+     - The server attempts to start a temporary local web server (trying ports 3000-3004).
+     - Your default web browser will automatically open to the Google Account login and consent screen.
+     - Follow the prompts in the browser to authorize the application.
+     - Upon successful authorization, you will be redirected to a local page (e.g., `http://localhost:3000/oauth2callback`).
+     - This page will display a success message confirming that the tokens have been saved to `.gcp-saved-tokens.json` (and show the exact file path).
+     - The temporary auth server shuts down automatically.
+     - The main MCP server continues its startup process.
 
 ### Manual Authentication Flow
 
 If you need to re-authenticate or prefer to handle authentication separately:
 
-1. Run the command: `npm run auth`
-2. This script performs the same browser-based authentication flow described above.
-3. Your browser will open, you authorize, and you'll see the success page indicating where tokens were saved.
-4. The script will exit automatically upon successful authentication.
+**For npx installations:**
+```bash
+# Using default credentials file location
+npx @nspady/google-calendar-mcp auth
+
+# Using custom credentials file path
+npx @nspady/google-calendar-mcp auth --credentials-file /path/to/your/credentials.json
+
+# Using environment variable
+export GOOGLE_OAUTH_CREDENTIALS_FILE="/path/to/your/credentials.json"
+npx @nspady/google-calendar-mcp auth
+```
+
+**For local installations:**
+```bash
+# Using default credentials file location
+npm run auth
+
+# The CLI parameter and environment variable methods also work for local installations
+```
+
+**Authentication Process:**
+1. The script performs the same browser-based authentication flow described above.
+2. Your browser will open, you authorize, and you'll see the success page indicating where tokens were saved.
+3. The script will exit automatically upon successful authentication.
 
 ### Token Management
 
@@ -137,44 +340,75 @@ Tests mock external dependencies (Google API, filesystem) to ensure isolated tes
 - OAuth credentials (`gcp-oauth.keys.json`) and saved tokens (`.gcp-saved-tokens.json`) should **never** be committed to version control. Ensure they are added to your `.gitignore` file.
 - For production use, consider getting your OAuth application verified by Google.
 
-## Usage with Claude Desktop
-
-1. Add this configuration to your Claude Desktop config file. E.g. `/Users/<user>/Library/Application Support/Claude/claude_desktop_config.json`:
-   ```json
-   {
-     "mcpServers": {
-       "google-calendar": {
-         "command": "node",
-         "args": ["<absolute-path-to-project-folder>/build/index.js"]
-       }
-     }
-   }
-   ```
-   Note: Replace `<absolute-path-to-project-folder>` with the actual path to your project directory.
-
-2. Restart Claude Desktop
-
-
 ## Development
 
 ### Troubleshooting
 
-1. **Authentication Errors / Connection Reset on Callback:**
-   - Ensure `gcp-oauth.keys.json` exists and contains credentials for a **Desktop App** type.
+1. **OAuth Credentials File Not Found (ENOENT Error):**
+   
+   If you see an error like `ENOENT: no such file or directory, open 'gcp-oauth.keys.json'`, the server cannot find your OAuth credentials file.
+
+   **⚠️ For npx users**: You **must** specify the credentials file path - the default file location method is not reliable with npx. Use one of these options:
+
+   **Option A: Use CLI Parameter (Recommended for npx)**
+   ```bash
+   # For authentication
+   npx @nspady/google-calendar-mcp auth --credentials-file /path/to/your/credentials.json
+   
+   # Update Claude Desktop config to use CLI parameter:
+   {
+     "mcpServers": {
+       "google-calendar": {
+         "command": "npx",
+         "args": ["@nspady/google-calendar-mcp", "start", "--credentials-file", "/path/to/your/credentials.json"]
+       }
+     }
+   }
+   ```
+
+   **Option B: Use Environment Variable**
+   ```bash
+   # Set environment variable
+   export GOOGLE_OAUTH_CREDENTIALS_FILE="/path/to/your/credentials.json"
+   
+   # Update Claude Desktop config to use environment variable:
+   {
+     "mcpServers": {
+       "google-calendar": {
+         "command": "npx",
+         "args": ["@nspady/google-calendar-mcp", "start"],
+         "env": {
+           "GOOGLE_OAUTH_CREDENTIALS_FILE": "/path/to/your/credentials.json"
+         }
+       }
+     }
+   }
+   ```
+
+   **For local installations only**: You can place `gcp-oauth.keys.json` in the project root directory.
+
+2. **Authentication Errors / Connection Reset on Callback:**
+   - Ensure your credentials file contains credentials for a **Desktop App** type.
    - Verify your user email is added as a **Test User** in the Google Cloud OAuth Consent screen settings (allow a few minutes for changes to propagate).
-   - Try deleting `.gcp-saved-tokens.json` and re-authenticating (`npm run auth` or restart `npm start`).
+   - Try deleting `.gcp-saved-tokens.json` and re-authenticating with your preferred credential loading method.
    - Check that no other process is blocking ports 3000-3004 when authentication is required.
 
-2. **Tokens Expire Weekly:**
+3. **Credential Loading Priority Issues:**
+   - Remember the loading priority: CLI parameter > Environment variable > Default file
+   - Use `--credentials-file` parameter to override environment variables
+   - Check that environment variables are properly set in your shell or Claude Desktop config
+   - Verify file paths are absolute and accessible
+
+4. **Tokens Expire Weekly:**
    - If your Google Cloud app is in **Testing** mode, refresh tokens expire after 7 days. Re-authenticate when needed.
    - Consider moving your app to **Production** in the Google Cloud Console for longer-lived refresh tokens (requires verification by Google).
 
-3. **Build Errors:**
+5. **Build Errors:**
    - Run `npm install` again.
    - Check Node.js version (use LTS).
    - Delete the `build/` directory and run `npm run build`.
 
-if you are a developer want to contribute this repository, please kindly take a look at [Architecture Overview](docs/architecture.md) before contributing
+If you are a developer want to contribute this repository, please kindly take a look at [Architecture Overview](docs/architecture.md) before contributing
 
 ## License
 
