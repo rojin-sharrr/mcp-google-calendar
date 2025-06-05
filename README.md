@@ -100,15 +100,14 @@ Along with the normal capabilities you would expect for a calendar integration y
    npm install
    ```
 3. **Configure OAuth credentials** using one of these methods:
+   **Option A: Custom file location (recommended)**
+   - Place your credentials file anywhere on your system
+   - Use the `GOOGLE_OAUTH_CREDENTIALS` environment variable to specify the path
 
-   **Option A: Default file location (Legacy)**
+   **Option B: In project file location (legacy)**
    - Download your Google OAuth credentials from the Google Cloud Console (under "Credentials") and rename the file to `gcp-oauth.keys.json` and place it in the root directory of the project.
    - Ensure the file contains credentials for a "Desktop app".
    - Alternatively, copy the provided template file: `cp gcp-oauth.keys.example.json gcp-oauth.keys.json` and populate it with your credentials from the Google Cloud Console.
-
-   **Option B: Custom file location**
-   - Place your credentials file anywhere on your system
-   - Use the `GOOGLE_OAUTH_CREDENTIALS` environment variable to specify the path
 
 4. **Add configuration to your Claude Desktop config file:**
 
