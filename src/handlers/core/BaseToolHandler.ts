@@ -85,4 +85,40 @@ export abstract class BaseToolHandler {
 
         return Promise.race([promise, timeoutPromise]);
     }
+
+    /**
+     * Gets calendar details including default timezone
+     * @param client OAuth2Client
+     * @param calendarId Calendar ID to fetch details for
+     * @returns Calendar details with timezone
+     */
+    protected async getCalendarDetails(client: OAuth2Client, calendarId: string): Promise<calendar_v3.Schema$CalendarListEntry> {
+        try {
+            const calendar = this.getCalendar(client);
+            const response = await calendar.calendarList.get({ calendarId });
+            if (!response.data) {
+                throw new Error(`Calendar ${calendarId} not found`);
+            }
+            return response.data;
+        } catch (error) {
+            throw this.handleGoogleApiError(error);
+        }
+    }
+
+    /**
+     * Gets the default timezone for a calendar, falling back to UTC if not available
+     * @param client OAuth2Client
+     * @param calendarId Calendar ID
+     * @returns Timezone string (IANA format)
+     */
+    protected async getCalendarTimezone(client: OAuth2Client, calendarId: string): Promise<string> {
+        try {
+            const calendarDetails = await this.getCalendarDetails(client, calendarId);
+            return calendarDetails.timeZone || 'UTC';
+        } catch (error) {
+            // If we can't get calendar details, fall back to UTC
+            return 'UTC';
+        }
+    }
+
 }

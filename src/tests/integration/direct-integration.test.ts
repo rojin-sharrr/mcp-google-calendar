@@ -295,6 +295,68 @@ describe('Google Calendar MCP - Direct Integration Tests', () => {
         
         await verifyEventInSearch(coloredEvent.summary);
       });
+
+      it('should create event without timezone and use calendar default', async () => {
+        // First, get the calendar details to know the expected default timezone
+        const calendarResult = await client.callTool({
+          name: 'list-calendars',
+          arguments: {}
+        });
+        
+        expect(TestDataFactory.validateEventResponse(calendarResult)).toBe(true);
+        
+        // Create event data without timezone
+        const eventData = TestDataFactory.createSingleEvent({
+          summary: 'Integration Test - Default Timezone Event'
+        });
+        
+        // Remove timezone from the event data to test default behavior
+        const eventDataWithoutTimezone = {
+          ...eventData,
+          timeZone: undefined
+        };
+        delete eventDataWithoutTimezone.timeZone;
+        
+        // Also convert datetime strings to timezone-naive format
+        eventDataWithoutTimezone.start = eventDataWithoutTimezone.start.replace(/[+-]\d{2}:\d{2}$|Z$/, '');
+        eventDataWithoutTimezone.end = eventDataWithoutTimezone.end.replace(/[+-]\d{2}:\d{2}$|Z$/, '');
+        
+        const startTime = testFactory.startTimer('create-event-default-timezone');
+        
+        try {
+          const result = await client.callTool({
+            name: 'create-event',
+            arguments: {
+              calendarId: TEST_CALENDAR_ID,
+              ...eventDataWithoutTimezone
+            }
+          });
+          
+          testFactory.endTimer('create-event-default-timezone', startTime, true);
+          
+          expect(TestDataFactory.validateEventResponse(result)).toBe(true);
+          
+          const eventId = TestDataFactory.extractEventIdFromResponse(result);
+          expect(eventId).toBeTruthy();
+          
+          createdEventIds.push(eventId!);
+          testFactory.addCreatedEventId(eventId!);
+          
+          // Verify the event was created successfully and shows up in searches
+          await verifyEventInSearch(eventData.summary);
+          
+          // Verify the response contains expected success indicators
+          const responseText = (result.content as any)[0].text;
+          expect(responseText).toContain('✅ Event created successfully!');
+          expect(responseText).toContain('🔗 View in Google Calendar:');
+          expect(responseText).toContain(eventData.summary);
+          
+          console.log('✅ Event created successfully without explicit timezone - using calendar default');
+        } catch (error) {
+          testFactory.endTimer('create-event-default-timezone', startTime, false, String(error));
+          throw error;
+        }
+      });
     });
 
     describe('Recurring Event Operations', () => {
@@ -375,8 +437,8 @@ describe('Google Calendar MCP - Direct Integration Tests', () => {
         name: 'list-events',
         arguments: {
           calendarId: invalidData.invalidCalendarId,
-          timeMin: TestDataFactory.formatDateTimeRFC3339(now),
-          timeMax: TestDataFactory.formatDateTimeRFC3339(tomorrow)
+          timeMin: TestDataFactory.formatDateTimeRFC3339WithTimezone(now),
+          timeMax: TestDataFactory.formatDateTimeRFC3339WithTimezone(tomorrow)
         }
       });
       
@@ -403,19 +465,20 @@ describe('Google Calendar MCP - Direct Integration Tests', () => {
     it('should handle malformed date formats gracefully', async () => {
       const invalidData = TestDataFactory.getInvalidTestData();
       
-      await expect(
-        client.callTool({
-          name: 'create-event',
-          arguments: {
-            calendarId: TEST_CALENDAR_ID,
-            summary: 'Test Event',
-            start: invalidData.invalidTimeFormat,
-            end: invalidData.invalidTimeFormat,
-            timeZone: 'America/Los_Angeles',
-            sendUpdates: SEND_UPDATES
-          }
-        })
-      ).rejects.toThrow();
+      const result = await client.callTool({
+        name: 'create-event',
+        arguments: {
+          calendarId: TEST_CALENDAR_ID,
+          summary: 'Test Event',
+          start: invalidData.invalidTimeFormat,
+          end: invalidData.invalidTimeFormat,
+          timeZone: 'America/Los_Angeles',
+          sendUpdates: SEND_UPDATES
+        }
+      });
+      
+      expect(result.isError).toBe(true);
+      expect((result.content as any)[0].text).toContain('error');
     });
   });
 

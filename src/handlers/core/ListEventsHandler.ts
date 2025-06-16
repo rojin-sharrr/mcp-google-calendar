@@ -4,6 +4,7 @@ import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
 import { formatEventList } from "../utils.js";
 import { BatchRequestHandler } from "./BatchRequestHandler.js";
+import { convertToRFC3339 } from "../utils/datetime.js";
 
 // Extended event type to include calendar ID for tracking source
 interface ExtendedEvent extends calendar_v3.Schema$Event {
@@ -14,6 +15,7 @@ interface ListEventsArgs {
   calendarId: string | string[];
   timeMin?: string;
   timeMax?: string;
+  timeZone?: string;
 }
 
 export class ListEventsHandler extends BaseToolHandler {
@@ -29,7 +31,8 @@ export class ListEventsHandler extends BaseToolHandler {
         
         const allEvents = await this.fetchEvents(oauth2Client, calendarIds, {
             timeMin: validArgs.timeMin,
-            timeMax: validArgs.timeMax
+            timeMax: validArgs.timeMax,
+            timeZone: validArgs.timeZone
         });
         
         return {
@@ -43,7 +46,7 @@ export class ListEventsHandler extends BaseToolHandler {
     private async fetchEvents(
         client: OAuth2Client,
         calendarIds: string[],
-        options: { timeMin?: string; timeMax?: string }
+        options: { timeMin?: string; timeMax?: string; timeZone?: string }
     ): Promise<ExtendedEvent[]> {
         if (calendarIds.length === 1) {
             return this.fetchSingleCalendarEvents(client, calendarIds[0], options);
@@ -55,14 +58,28 @@ export class ListEventsHandler extends BaseToolHandler {
     private async fetchSingleCalendarEvents(
         client: OAuth2Client,
         calendarId: string,
-        options: { timeMin?: string; timeMax?: string }
+        options: { timeMin?: string; timeMax?: string; timeZone?: string }
     ): Promise<ExtendedEvent[]> {
         try {
             const calendar = this.getCalendar(client);
+            
+            // Determine timezone with correct precedence:
+            // 1. Explicit timeZone parameter (highest priority)  
+            // 2. Calendar's default timezone (fallback)
+            // Note: convertToRFC3339 will still respect timezone in datetime string as ultimate override
+            let timeMin = options.timeMin;
+            let timeMax = options.timeMax;
+            
+            if (timeMin || timeMax) {
+                const timezone = options.timeZone || await this.getCalendarTimezone(client, calendarId);
+                timeMin = timeMin ? convertToRFC3339(timeMin, timezone) : undefined;
+                timeMax = timeMax ? convertToRFC3339(timeMax, timezone) : undefined;
+            }
+            
             const response = await calendar.events.list({
                 calendarId,
-                timeMin: options.timeMin,
-                timeMax: options.timeMax,
+                timeMin,
+                timeMax,
                 singleEvents: true,
                 orderBy: 'startTime'
             });
@@ -80,14 +97,14 @@ export class ListEventsHandler extends BaseToolHandler {
     private async fetchMultipleCalendarEvents(
         client: OAuth2Client,
         calendarIds: string[],
-        options: { timeMin?: string; timeMax?: string }
+        options: { timeMin?: string; timeMax?: string; timeZone?: string }
     ): Promise<ExtendedEvent[]> {
         const batchHandler = new BatchRequestHandler(client);
         
-        const requests = calendarIds.map(calendarId => ({
+        const requests = await Promise.all(calendarIds.map(async (calendarId) => ({
             method: "GET" as const,
-            path: this.buildEventsPath(calendarId, options)
-        }));
+            path: await this.buildEventsPath(client, calendarId, options)
+        })));
         
         const responses = await batchHandler.executeBatch(requests);
         
@@ -100,12 +117,25 @@ export class ListEventsHandler extends BaseToolHandler {
         return this.sortEventsByStartTime(events);
     }
 
-    private buildEventsPath(calendarId: string, options: { timeMin?: string; timeMax?: string }): string {
+    private async buildEventsPath(client: OAuth2Client, calendarId: string, options: { timeMin?: string; timeMax?: string; timeZone?: string }): Promise<string> {
+        // Determine timezone with correct precedence:
+        // 1. Explicit timeZone parameter (highest priority)
+        // 2. Calendar's default timezone (fallback)
+        // Note: convertToRFC3339 will still respect timezone in datetime string as ultimate override
+        let timeMin = options.timeMin;
+        let timeMax = options.timeMax;
+        
+        if (timeMin || timeMax) {
+            const timezone = options.timeZone || await this.getCalendarTimezone(client, calendarId);
+            timeMin = timeMin ? convertToRFC3339(timeMin, timezone) : undefined;
+            timeMax = timeMax ? convertToRFC3339(timeMax, timezone) : undefined;
+        }
+        
         const params = new URLSearchParams({
             singleEvents: "true",
             orderBy: "startTime",
-            ...(options.timeMin && { timeMin: options.timeMin }),
-            ...(options.timeMax && { timeMax: options.timeMax })
+            ...(timeMin && { timeMin }),
+            ...(timeMax && { timeMax })
         });
         
         return `/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params.toString()}`;
@@ -180,4 +210,5 @@ export class ListEventsHandler extends BaseToolHandler {
             return acc;
         }, {} as Record<string, ExtendedEvent[]>);
     }
+
 }

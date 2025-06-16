@@ -4,6 +4,7 @@ import { SearchEventsInput } from "../../tools/registry.js";
 import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
 import { formatEventList } from "../utils.js";
+import { convertToRFC3339 } from "../utils/datetime.js";
 
 export class SearchEventsHandler extends BaseToolHandler {
     async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
@@ -23,11 +24,22 @@ export class SearchEventsHandler extends BaseToolHandler {
     ): Promise<calendar_v3.Schema$Event[]> {
         try {
             const calendar = this.getCalendar(client);
+            
+            // Determine timezone with correct precedence:
+            // 1. Explicit timeZone parameter (highest priority)
+            // 2. Calendar's default timezone (fallback)
+            const timezone = args.timeZone || await this.getCalendarTimezone(client, args.calendarId);
+            
+            // Convert time boundaries to RFC3339 format for Google Calendar API
+            // Note: convertToRFC3339 will still respect timezone in datetime string as highest priority
+            const timeMin = convertToRFC3339(args.timeMin, timezone);
+            const timeMax = convertToRFC3339(args.timeMax, timezone);
+            
             const response = await calendar.events.list({
                 calendarId: args.calendarId,
                 q: args.query,
-                timeMin: args.timeMin,
-                timeMax: args.timeMax,
+                timeMin,
+                timeMax,
                 singleEvents: true,
                 orderBy: 'startTime',
             });
@@ -36,4 +48,5 @@ export class SearchEventsHandler extends BaseToolHandler {
             throw this.handleGoogleApiError(error);
         }
     }
+
 }

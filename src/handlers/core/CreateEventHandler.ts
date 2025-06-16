@@ -4,6 +4,7 @@ import { CreateEventInput } from "../../tools/registry.js";
 import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
 import { formatEventWithUrl } from "../utils.js";
+import { createTimeObject } from "../utils/datetime.js";
 
 export class CreateEventHandler extends BaseToolHandler {
     async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
@@ -23,11 +24,15 @@ export class CreateEventHandler extends BaseToolHandler {
     ): Promise<calendar_v3.Schema$Event> {
         try {
             const calendar = this.getCalendar(client);
+            
+            // Use provided timezone or calendar's default timezone
+            const timezone = args.timeZone || await this.getCalendarTimezone(client, args.calendarId);
+            
             const requestBody: calendar_v3.Schema$Event = {
                 summary: args.summary,
                 description: args.description,
-                start: { dateTime: args.start, timeZone: args.timeZone },
-                end: { dateTime: args.end, timeZone: args.timeZone },
+                start: createTimeObject(args.start, timezone),
+                end: createTimeObject(args.end, timezone),
                 attendees: args.attendees,
                 location: args.location,
                 colorId: args.colorId,

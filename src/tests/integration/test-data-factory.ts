@@ -41,7 +41,15 @@ export class TestDataFactory {
   }
 
   // Helper method to format dates in RFC3339 format without milliseconds
+  // For events with a timeZone field, use timezone-naive format to avoid conflicts
   public static formatDateTimeRFC3339(date: Date): string {
+    const isoString = date.toISOString();
+    // Return timezone-naive format (without Z suffix) to work better with timeZone field
+    return isoString.replace(/\.\d{3}Z$/, '');
+  }
+
+  // Helper method to format dates in RFC3339 format with timezone (for search operations)
+  public static formatDateTimeRFC3339WithTimezone(date: Date): string {
     return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
   }
 
@@ -142,23 +150,23 @@ export class TestDataFactory {
     return {
       // Past week
       pastWeek: {
-        timeMin: this.formatDateTimeRFC3339(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)),
-        timeMax: this.formatDateTimeRFC3339(now)
+        timeMin: this.formatDateTimeRFC3339WithTimezone(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)),
+        timeMax: this.formatDateTimeRFC3339WithTimezone(now)
       },
       // Next week
       nextWeek: {
-        timeMin: this.formatDateTimeRFC3339(now),
-        timeMax: this.formatDateTimeRFC3339(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000))
+        timeMin: this.formatDateTimeRFC3339WithTimezone(now),
+        timeMax: this.formatDateTimeRFC3339WithTimezone(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000))
       },
       // Next month
       nextMonth: {
-        timeMin: this.formatDateTimeRFC3339(now),
-        timeMax: this.formatDateTimeRFC3339(new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000))
+        timeMin: this.formatDateTimeRFC3339WithTimezone(now),
+        timeMax: this.formatDateTimeRFC3339WithTimezone(new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000))
       },
       // Large range (3 months)
       threeMonths: {
-        timeMin: this.formatDateTimeRFC3339(now),
-        timeMax: this.formatDateTimeRFC3339(new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000))
+        timeMin: this.formatDateTimeRFC3339WithTimezone(now),
+        timeMax: this.formatDateTimeRFC3339WithTimezone(new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000))
       }
     };
   }

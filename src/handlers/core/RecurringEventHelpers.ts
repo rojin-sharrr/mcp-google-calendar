@@ -112,7 +112,7 @@ export class RecurringEventHelpers {
   /**
    * Builds request body for event updates
    */
-  buildUpdateRequestBody(args: any): calendar_v3.Schema$Event {
+  buildUpdateRequestBody(args: any, defaultTimeZone?: string): calendar_v3.Schema$Event {
     const requestBody: calendar_v3.Schema$Event = {};
 
     if (args.summary !== undefined && args.summary !== null) requestBody.summary = args.summary;
@@ -125,21 +125,23 @@ export class RecurringEventHelpers {
 
     // Handle time changes
     let timeChanged = false;
+    const effectiveTimeZone = args.timeZone || defaultTimeZone;
+    
     if (args.start !== undefined && args.start !== null) {
-      requestBody.start = { dateTime: args.start, timeZone: args.timeZone };
+      requestBody.start = { dateTime: args.start, timeZone: effectiveTimeZone };
       timeChanged = true;
     }
     if (args.end !== undefined && args.end !== null) {
-      requestBody.end = { dateTime: args.end, timeZone: args.timeZone };
+      requestBody.end = { dateTime: args.end, timeZone: effectiveTimeZone };
       timeChanged = true;
     }
 
     // Only add timezone objects if there were actual time changes, OR if neither start/end provided but timezone is given
-    if (timeChanged || (!args.start && !args.end && args.timeZone)) {
+    if (timeChanged || (!args.start && !args.end && effectiveTimeZone)) {
       if (!requestBody.start) requestBody.start = {};
       if (!requestBody.end) requestBody.end = {};
-      if (!requestBody.start.timeZone) requestBody.start.timeZone = args.timeZone;
-      if (!requestBody.end.timeZone) requestBody.end.timeZone = args.timeZone;
+      if (!requestBody.start.timeZone) requestBody.start.timeZone = effectiveTimeZone;
+      if (!requestBody.end.timeZone) requestBody.end.timeZone = effectiveTimeZone;
     }
 
     return requestBody;

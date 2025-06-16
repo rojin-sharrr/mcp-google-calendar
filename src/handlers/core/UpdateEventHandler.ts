@@ -26,6 +26,9 @@ export class UpdateEventHandler extends BaseToolHandler {
             const calendar = this.getCalendar(client);
             const helpers = new RecurringEventHelpers(calendar);
             
+            // Get calendar's default timezone if not provided
+            const defaultTimeZone = await this.getCalendarTimezone(client, args.calendarId);
+            
             // Detect event type and validate scope usage
             const eventType = await helpers.detectEventType(args.eventId, args.calendarId);
             
@@ -38,12 +41,12 @@ export class UpdateEventHandler extends BaseToolHandler {
             
             switch (args.modificationScope) {
                 case 'thisEventOnly':
-                    return this.updateSingleInstance(helpers, args);
+                    return this.updateSingleInstance(helpers, args, defaultTimeZone);
                 case 'all':
                 case undefined:
-                    return this.updateAllInstances(helpers, args);
+                    return this.updateAllInstances(helpers, args, defaultTimeZone);
                 case 'thisAndFollowing':
-                    return this.updateFutureInstances(helpers, args);
+                    return this.updateFutureInstances(helpers, args, defaultTimeZone);
                 default:
                     throw new RecurringEventError(
                         `Invalid modification scope: ${args.modificationScope}`,
@@ -60,7 +63,8 @@ export class UpdateEventHandler extends BaseToolHandler {
 
     private async updateSingleInstance(
         helpers: RecurringEventHelpers,
-        args: UpdateEventInput
+        args: UpdateEventInput,
+        defaultTimeZone: string
     ): Promise<calendar_v3.Schema$Event> {
         if (!args.originalStartTime) {
             throw new RecurringEventError(
@@ -75,7 +79,7 @@ export class UpdateEventHandler extends BaseToolHandler {
         const response = await calendar.events.patch({
             calendarId: args.calendarId,
             eventId: instanceId,
-            requestBody: helpers.buildUpdateRequestBody(args)
+            requestBody: helpers.buildUpdateRequestBody(args, defaultTimeZone)
         });
 
         if (!response.data) throw new Error('Failed to update event instance');
@@ -84,14 +88,15 @@ export class UpdateEventHandler extends BaseToolHandler {
 
     private async updateAllInstances(
         helpers: RecurringEventHelpers,
-        args: UpdateEventInput
+        args: UpdateEventInput,
+        defaultTimeZone: string
     ): Promise<calendar_v3.Schema$Event> {
         const calendar = helpers.getCalendar();
         
         const response = await calendar.events.patch({
             calendarId: args.calendarId,
             eventId: args.eventId,
-            requestBody: helpers.buildUpdateRequestBody(args)
+            requestBody: helpers.buildUpdateRequestBody(args, defaultTimeZone)
         });
 
         if (!response.data) throw new Error('Failed to update event');
@@ -100,7 +105,8 @@ export class UpdateEventHandler extends BaseToolHandler {
 
     private async updateFutureInstances(
         helpers: RecurringEventHelpers,
-        args: UpdateEventInput
+        args: UpdateEventInput,
+        defaultTimeZone: string
     ): Promise<calendar_v3.Schema$Event> {
         if (!args.futureStartDate) {
             throw new RecurringEventError(
@@ -110,6 +116,7 @@ export class UpdateEventHandler extends BaseToolHandler {
         }
 
         const calendar = helpers.getCalendar();
+        const effectiveTimeZone = args.timeZone || defaultTimeZone;
 
         // 1. Get original event
         const originalResponse = await calendar.events.get({
@@ -133,7 +140,7 @@ export class UpdateEventHandler extends BaseToolHandler {
         });
 
         // 3. Create new recurring event starting from future date
-        const requestBody = helpers.buildUpdateRequestBody(args);
+        const requestBody = helpers.buildUpdateRequestBody(args, defaultTimeZone);
         
         // Calculate end time if start time is changing
         let endTime = args.end;
@@ -147,11 +154,11 @@ export class UpdateEventHandler extends BaseToolHandler {
             ...requestBody,
             start: { 
                 dateTime: args.start || args.futureStartDate, 
-                timeZone: args.timeZone 
+                timeZone: effectiveTimeZone 
             },
             end: { 
                 dateTime: endTime, 
-                timeZone: args.timeZone 
+                timeZone: effectiveTimeZone 
             }
         };
 

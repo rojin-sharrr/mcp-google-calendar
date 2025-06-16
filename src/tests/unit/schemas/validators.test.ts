@@ -5,12 +5,12 @@ import { ToolSchemas } from '../../../tools/registry.js';
 const UpdateEventArgumentsSchema = ToolSchemas['update-event'];
 const ListEventsArgumentsSchema = ToolSchemas['list-events'];
 
-// Helper to generate a future date string in the correct format (without milliseconds)
+// Helper to generate a future date string in timezone-naive format
 function getFutureDateString(daysFromNow: number = 365): string {
   const futureDate = new Date();
   futureDate.setDate(futureDate.getDate() + daysFromNow);
-  // Format as ISO string without milliseconds
-  return futureDate.toISOString().split('.')[0] + 'Z';
+  // Format as timezone-naive ISO string (no timezone suffix)
+  return futureDate.toISOString().split('.')[0];
 }
 
 describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
@@ -47,8 +47,8 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
         description: 'Updated description',
         location: 'New Location',
         colorId: '9',
-        start: '2024-06-15T10:00:00-07:00',
-        end: '2024-06-15T11:00:00-07:00'
+        start: '2024-06-15T10:00:00',
+        end: '2024-06-15T11:00:00'
       };
 
       const result = UpdateEventArgumentsSchema.parse(validArgs);
@@ -84,7 +84,7 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
 
         // Add required fields for each scope
         if (scope === 'thisEventOnly') {
-          args.originalStartTime = '2024-06-15T10:00:00-07:00';
+          args.originalStartTime = '2024-06-15T10:00:00';
         } else if (scope === 'thisAndFollowing') {
           args.futureStartDate = getFutureDateString(90); // 90 days from now
         }
@@ -127,12 +127,12 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
         eventId: 'event123',
         timeZone: 'America/Los_Angeles',
         modificationScope: 'thisEventOnly',
-        originalStartTime: '2024-06-15T10:00:00-07:00'
+        originalStartTime: '2024-06-15T10:00:00'
       };
 
       const result = UpdateEventArgumentsSchema.parse(args);
       expect(result.modificationScope).toBe('thisEventOnly');
-      expect(result.originalStartTime).toBe('2024-06-15T10:00:00-07:00');
+      expect(result.originalStartTime).toBe('2024-06-15T10:00:00');
     });
 
     it('should reject invalid originalStartTime format', () => {
@@ -147,16 +147,16 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
       expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow();
     });
 
-    it('should accept originalStartTime without timezone designator error', () => {
+    it('should accept originalStartTime without timezone designator', () => {
       const args = {
         calendarId: 'primary',
         eventId: 'event123',
         timeZone: 'America/Los_Angeles',
         modificationScope: 'thisEventOnly',
-        originalStartTime: '2024-06-15T10:00:00' // missing timezone
+        originalStartTime: '2024-06-15T10:00:00' // timezone-naive format (expected)
       };
 
-      expect(() => UpdateEventArgumentsSchema.parse(args)).toThrow();
+      expect(() => UpdateEventArgumentsSchema.parse(args)).not.toThrow();
     });
   });
 
@@ -225,18 +225,19 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
 
   describe('Datetime Format Validation', () => {
     const validDatetimes = [
-      '2024-06-15T10:00:00Z',
-      '2024-06-15T10:00:00-07:00',
-      '2024-06-15T10:00:00+05:30',
-      '2024-12-31T23:59:59-08:00'
+      '2024-06-15T10:00:00',      // timezone-naive (preferred)
+      '2024-12-31T23:59:59',      // timezone-naive (preferred)
+      '2024-01-01T00:00:00',      // timezone-naive (preferred)
+      '2024-06-15T10:00:00Z',     // timezone-aware (accepted)
+      '2024-06-15T10:00:00-07:00', // timezone-aware (accepted)
+      '2024-06-15T10:00:00+05:30'  // timezone-aware (accepted)
     ];
 
     const invalidDatetimes = [
-      '2024-06-15T10:00:00',     // missing timezone
-      '2024-06-15 10:00:00Z',    // space instead of T
-      '24-06-15T10:00:00Z',      // short year
-      '2024-6-15T10:00:00Z',     // single digit month
-      '2024-06-15T10:00Z'        // missing seconds
+      '2024-06-15 10:00:00',     // space instead of T
+      '24-06-15T10:00:00',       // short year
+      '2024-6-15T10:00:00',      // single digit month
+      '2024-06-15T10:00'         // missing seconds
     ];
 
     validDatetimes.forEach(datetime => {
@@ -278,8 +279,8 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
         summary: 'Updated Meeting',
         description: 'Updated description',
         location: 'New Conference Room',
-        start: '2024-06-15T10:00:00-07:00',
-        end: '2024-06-15T11:00:00-07:00',
+        start: '2024-06-15T10:00:00',
+        end: '2024-06-15T11:00:00',
         colorId: '9',
         attendees: [
           { email: 'user1@example.com' },
@@ -318,12 +319,12 @@ describe('UpdateEventArgumentsSchema with Recurring Event Support', () => {
         eventId: 'event123',
         timeZone: 'America/Los_Angeles',
         modificationScope: 'all',
-        originalStartTime: '2024-06-15T10:00:00-07:00', // optional for 'all' scope
+        originalStartTime: '2024-06-15T10:00:00', // optional for 'all' scope
         summary: 'Updated Meeting'
       };
 
       const result = UpdateEventArgumentsSchema.parse(args);
-      expect(result.originalStartTime).toBe('2024-06-15T10:00:00-07:00');
+      expect(result.originalStartTime).toBe('2024-06-15T10:00:00');
     });
   });
 
