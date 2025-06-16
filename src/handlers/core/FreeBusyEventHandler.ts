@@ -1,21 +1,14 @@
 import { BaseToolHandler } from './BaseToolHandler.js';
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OAuth2Client } from "google-auth-library";
-import { FreeBusyEventArgumentsSchema } from "../../schemas/validators.js";
-import { z } from "zod";
+import { GetFreeBusyInput } from "../../tools/registry.js";
 import { FreeBusyResponse } from '../../schemas/types.js';
 
 export class FreeBusyEventHandler extends BaseToolHandler {
   async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
+    const validArgs = args as GetFreeBusyInput;
 
-    const validArgs = FreeBusyEventArgumentsSchema.safeParse(args);
-    if (!validArgs.success) {
-      throw new Error(
-          `Invalid arguments Error: ${JSON.stringify(validArgs.error.issues)}`
-      );
-    }
-
-    if(!this.isLessThanThreeMonths(validArgs.data.timeMin,validArgs.data.timeMax)){
+    if(!this.isLessThanThreeMonths(validArgs.timeMin,validArgs.timeMax)){
       return {
         content: [{
           type: "text",
@@ -24,7 +17,7 @@ export class FreeBusyEventHandler extends BaseToolHandler {
       }
     }
 
-    const result = await this.queryFreeBusy(oauth2Client, validArgs.data);
+    const result = await this.queryFreeBusy(oauth2Client, validArgs);
     const summaryText = this.generateAvailabilitySummary(result);
 
     return {
@@ -37,7 +30,7 @@ export class FreeBusyEventHandler extends BaseToolHandler {
 
   private async queryFreeBusy(
     client: OAuth2Client,
-    args: z.infer<typeof FreeBusyEventArgumentsSchema>
+    args: GetFreeBusyInput
   ): Promise<FreeBusyResponse> {
     try {
       const calendar = this.getCalendar(client);
@@ -48,7 +41,7 @@ export class FreeBusyEventHandler extends BaseToolHandler {
           timeZone: args.timeZone,
           groupExpansionMax: args.groupExpansionMax,
           calendarExpansionMax: args.calendarExpansionMax,
-          items: args.items,
+          items: args.calendars,
         },
       });
       return response.data as FreeBusyResponse;

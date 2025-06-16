@@ -1,12 +1,12 @@
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OAuth2Client } from "google-auth-library";
-import { DeleteEventArgumentsSchema } from "../../schemas/validators.js";
 import { BaseToolHandler } from "./BaseToolHandler.js";
+import { DeleteEventInput } from "../../tools/registry.js";
 import { z } from 'zod';
 
 export class DeleteEventHandler extends BaseToolHandler {
     async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
-        const validArgs = DeleteEventArgumentsSchema.parse(args);
+        const validArgs = args as DeleteEventInput;
         await this.deleteEvent(oauth2Client, validArgs);
         return {
             content: [{
@@ -18,13 +18,14 @@ export class DeleteEventHandler extends BaseToolHandler {
 
     private async deleteEvent(
         client: OAuth2Client,
-        args: z.infer<typeof DeleteEventArgumentsSchema>
+        args: DeleteEventInput
     ): Promise<void> {
         try {
             const calendar = this.getCalendar(client);
             await calendar.events.delete({
                 calendarId: args.calendarId,
                 eventId: args.eventId,
+                sendUpdates: args.sendUpdates,
             });
         } catch (error) {
             throw this.handleGoogleApiError(error);

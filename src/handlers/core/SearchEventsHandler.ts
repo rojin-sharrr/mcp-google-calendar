@@ -1,26 +1,25 @@
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OAuth2Client } from "google-auth-library";
-import { SearchEventsArgumentsSchema } from "../../schemas/validators.js";
+import { SearchEventsInput } from "../../tools/registry.js";
 import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
-import { z } from 'zod';
 import { formatEventList } from "../utils.js";
 
 export class SearchEventsHandler extends BaseToolHandler {
     async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
-        const validArgs = SearchEventsArgumentsSchema.parse(args);
+        const validArgs = args as SearchEventsInput;
         const events = await this.searchEvents(oauth2Client, validArgs);
         return {
             content: [{
                 type: "text",
-                text: formatEventList(events),
+                text: formatEventList(events, validArgs.calendarId),
             }],
         };
     }
 
     private async searchEvents(
         client: OAuth2Client,
-        args: z.infer<typeof SearchEventsArgumentsSchema>
+        args: SearchEventsInput
     ): Promise<calendar_v3.Schema$Event[]> {
         try {
             const calendar = this.getCalendar(client);

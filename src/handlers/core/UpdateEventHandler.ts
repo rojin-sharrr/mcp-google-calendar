@@ -1,26 +1,26 @@
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OAuth2Client } from "google-auth-library";
-import { UpdateEventArgumentsSchema } from "../../schemas/validators.js";
+import { UpdateEventInput } from "../../tools/registry.js";
 import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
-import { z } from 'zod';
 import { RecurringEventHelpers, RecurringEventError, RECURRING_EVENT_ERRORS } from './RecurringEventHelpers.js';
+import { formatEventWithUrl } from "../utils.js";
 
 export class UpdateEventHandler extends BaseToolHandler {
     async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
-        const validArgs = UpdateEventArgumentsSchema.parse(args);
+        const validArgs = args as UpdateEventInput;
         const event = await this.updateEventWithScope(oauth2Client, validArgs);
         return {
             content: [{
                 type: "text",
-                text: `Event updated: ${event.summary} (${event.id})`,
+                text: `✅ Event updated successfully! Click the link below to view the changes in Google Calendar:\n\n${formatEventWithUrl(event, validArgs.calendarId)}`,
             }],
         };
     }
 
     private async updateEventWithScope(
         client: OAuth2Client,
-        args: z.infer<typeof UpdateEventArgumentsSchema>
+        args: UpdateEventInput
     ): Promise<calendar_v3.Schema$Event> {
         try {
             const calendar = this.getCalendar(client);
@@ -29,7 +29,7 @@ export class UpdateEventHandler extends BaseToolHandler {
             // Detect event type and validate scope usage
             const eventType = await helpers.detectEventType(args.eventId, args.calendarId);
             
-            if (args.modificationScope !== 'all' && eventType !== 'recurring') {
+            if (args.modificationScope && args.modificationScope !== 'all' && eventType !== 'recurring') {
                 throw new RecurringEventError(
                     'Scope other than "all" only applies to recurring events',
                     RECURRING_EVENT_ERRORS.NON_RECURRING_SCOPE
@@ -37,11 +37,12 @@ export class UpdateEventHandler extends BaseToolHandler {
             }
             
             switch (args.modificationScope) {
-                case 'single':
+                case 'thisEventOnly':
                     return this.updateSingleInstance(helpers, args);
                 case 'all':
+                case undefined:
                     return this.updateAllInstances(helpers, args);
-                case 'future':
+                case 'thisAndFollowing':
                     return this.updateFutureInstances(helpers, args);
                 default:
                     throw new RecurringEventError(
@@ -59,7 +60,7 @@ export class UpdateEventHandler extends BaseToolHandler {
 
     private async updateSingleInstance(
         helpers: RecurringEventHelpers,
-        args: z.infer<typeof UpdateEventArgumentsSchema>
+        args: UpdateEventInput
     ): Promise<calendar_v3.Schema$Event> {
         if (!args.originalStartTime) {
             throw new RecurringEventError(
@@ -83,7 +84,7 @@ export class UpdateEventHandler extends BaseToolHandler {
 
     private async updateAllInstances(
         helpers: RecurringEventHelpers,
-        args: z.infer<typeof UpdateEventArgumentsSchema>
+        args: UpdateEventInput
     ): Promise<calendar_v3.Schema$Event> {
         const calendar = helpers.getCalendar();
         
@@ -99,7 +100,7 @@ export class UpdateEventHandler extends BaseToolHandler {
 
     private async updateFutureInstances(
         helpers: RecurringEventHelpers,
-        args: z.infer<typeof UpdateEventArgumentsSchema>
+        args: UpdateEventInput
     ): Promise<calendar_v3.Schema$Event> {
         if (!args.futureStartDate) {
             throw new RecurringEventError(
@@ -163,12 +164,4 @@ export class UpdateEventHandler extends BaseToolHandler {
         return response.data;
     }
 
-    // Keep the original updateEvent method for backward compatibility
-    private async updateEvent(
-        client: OAuth2Client,
-        args: z.infer<typeof UpdateEventArgumentsSchema>
-    ): Promise<calendar_v3.Schema$Event> {
-        // This method now just delegates to the enhanced version
-        return this.updateEventWithScope(client, args);
-    }
 }
