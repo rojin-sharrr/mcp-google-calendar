@@ -1,6 +1,6 @@
 {
   "name": "@cocal/google-calendar-mcp",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "description": "Google Calendar MCP Server with extensive support for calendar management",
   "type": "module",
   "bin": {
@@ -31,9 +31,6 @@
   "homepage": "https://github.com/nspady/google-calendar-mcp#readme",
   "author": "nspady",
   "license": "MIT",
-  "engines": {
-    "node": ">=18"
-  },
   "scripts": {
     "start": "node build/index.js",
     "build": "node scripts/build.js",
