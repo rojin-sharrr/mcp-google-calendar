@@ -347,8 +347,7 @@ describe('Google Calendar MCP - Direct Integration Tests', () => {
           
           // Verify the response contains expected success indicators
           const responseText = (result.content as any)[0].text;
-          expect(responseText).toContain('✅ Event created successfully!');
-          expect(responseText).toContain('🔗 View in Google Calendar:');
+          expect(responseText).toContain('Event created successfully!');
           expect(responseText).toContain(eventData.summary);
           
           console.log('✅ Event created successfully without explicit timezone - using calendar default');

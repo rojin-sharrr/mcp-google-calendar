@@ -47,11 +47,22 @@ describe('Schema $ref Prevention Tests', () => {
     );
     
     // Check for problematic patterns that could cause $ref generation
+    // Note: Removed negative lookahead (?!\.) to catch ALL schema reuse including .optional() and .describe()
     const sharedSchemaUsage = [
-      /timeMin:\s*[A-Z][a-zA-Z]*Schema(?!\.)/,  // timeMin: SomeSchema (not SomeSchema.describe)
-      /timeMax:\s*[A-Z][a-zA-Z]*Schema(?!\.)/,  // timeMax: SomeSchema
-      /start:\s*[A-Z][a-zA-Z]*Schema(?!\.)/,    // start: SomeSchema
-      /end:\s*[A-Z][a-zA-Z]*Schema(?!\.)/       // end: SomeSchema
+      /timeMin:\s*[A-Z][a-zA-Z]*Schema/,     // timeMin: SomeSchema (any usage)
+      /timeMax:\s*[A-Z][a-zA-Z]*Schema/,     // timeMax: SomeSchema
+      /start:\s*[A-Z][a-zA-Z]*Schema/,       // start: SomeSchema
+      /end:\s*[A-Z][a-zA-Z]*Schema/,         // end: SomeSchema
+      /calendarId:\s*[A-Z][a-zA-Z]*Schema/,  // calendarId: SomeSchema
+      /eventId:\s*[A-Z][a-zA-Z]*Schema/,     // eventId: SomeSchema
+      /query:\s*[A-Z][a-zA-Z]*Schema/,       // query: SomeSchema
+      /summary:\s*[A-Z][a-zA-Z]*Schema/,     // summary: SomeSchema
+      /description:\s*[A-Z][a-zA-Z]*Schema/, // description: SomeSchema
+      /location:\s*[A-Z][a-zA-Z]*Schema/,    // location: SomeSchema
+      /colorId:\s*[A-Z][a-zA-Z]*Schema/,     // colorId: SomeSchema
+      /reminders:\s*[A-Z][a-zA-Z]*Schema/,   // reminders: SomeSchema
+      /attendees:\s*[A-Z][a-zA-Z]*Schema/,   // attendees: SomeSchema
+      /email:\s*[A-Z][a-zA-Z]*Schema/        // email: SomeSchema
     ];
     
     for (const pattern of sharedSchemaUsage) {

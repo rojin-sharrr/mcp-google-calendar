@@ -4,17 +4,21 @@ import { UpdateEventInput } from "../../tools/registry.js";
 import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
 import { RecurringEventHelpers, RecurringEventError, RECURRING_EVENT_ERRORS } from './RecurringEventHelpers.js';
-import { formatEventWithUrl } from "../utils.js";
+import { formatEventWithDetails } from "../utils.js";
 
 export class UpdateEventHandler extends BaseToolHandler {
     async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
         const validArgs = args as UpdateEventInput;
         const event = await this.updateEventWithScope(oauth2Client, validArgs);
+        
+        const eventDetails = formatEventWithDetails(event, validArgs.calendarId);
+        const text = `Event updated successfully!\n\n${eventDetails}`;
+        
         return {
             content: [{
                 type: "text",
-                text: `✅ Event updated successfully! Click the link below to view the changes in Google Calendar:\n\n${formatEventWithUrl(event, validArgs.calendarId)}`,
-            }],
+                text: text
+            }]
         };
     }
 

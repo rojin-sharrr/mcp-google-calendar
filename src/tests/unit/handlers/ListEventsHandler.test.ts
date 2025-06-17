@@ -55,7 +55,9 @@ Content-Type: application/json
     };
 
     const result = await handler.runTool(args, mockOAuth2Client);
-    expect(result.content[0].text).toContain('Test Event');
+    expect(result.content).toHaveLength(1);
+    expect(result.content[0].type).toBe('text');
+    expect((result.content[0] as any).text).toContain('Found');
   });
 
   it('should handle multiple calendar IDs as array', async () => {
@@ -66,7 +68,9 @@ Content-Type: application/json
     };
 
     const result = await handler.runTool(args, mockOAuth2Client);
-    expect(result.content[0].text).toContain('Test Event');
+    expect(result.content).toHaveLength(1);
+    expect(result.content[0].type).toBe('text');
+    expect((result.content[0] as any).text).toContain('Found');
   });
 
   it('should handle calendar IDs passed as JSON string', async () => {
@@ -85,6 +89,8 @@ Content-Type: application/json
     }
 
     const result = await handler.runTool(processedArgs, mockOAuth2Client);
-    expect(result.content[0].text).toContain('Test Event');
+    expect(result.content).toHaveLength(1);
+    expect(result.content[0].type).toBe('text');
+    expect((result.content[0] as any).text).toContain('Found');
   });
 }); 

@@ -3,18 +3,22 @@ import { OAuth2Client } from "google-auth-library";
 import { CreateEventInput } from "../../tools/registry.js";
 import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
-import { formatEventWithUrl } from "../utils.js";
+import { formatEventWithDetails } from "../utils.js";
 import { createTimeObject } from "../utils/datetime.js";
 
 export class CreateEventHandler extends BaseToolHandler {
     async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
         const validArgs = args as CreateEventInput;
         const event = await this.createEvent(oauth2Client, validArgs);
+        
+        const eventDetails = formatEventWithDetails(event, validArgs.calendarId);
+        const text = `Event created successfully!\n\n${eventDetails}`;
+        
         return {
             content: [{
                 type: "text",
-                text: `✅ Event created successfully! Click the link below to view it in Google Calendar:\n\n${formatEventWithUrl(event, validArgs.calendarId)}`,
-            }],
+                text: text
+            }]
         };
     }
 

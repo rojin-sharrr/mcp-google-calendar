@@ -3,18 +3,35 @@ import { OAuth2Client } from "google-auth-library";
 import { SearchEventsInput } from "../../tools/registry.js";
 import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
-import { formatEventList } from "../utils.js";
+import { formatEventWithDetails } from "../utils.js";
 import { convertToRFC3339 } from "../utils/datetime.js";
 
 export class SearchEventsHandler extends BaseToolHandler {
     async runTool(args: any, oauth2Client: OAuth2Client): Promise<CallToolResult> {
         const validArgs = args as SearchEventsInput;
         const events = await this.searchEvents(oauth2Client, validArgs);
+        
+        if (events.length === 0) {
+            return {
+                content: [{
+                    type: "text",
+                    text: "No events found matching your search criteria."
+                }]
+            };
+        }
+        
+        let text = `Found ${events.length} event(s) matching your search:\n\n`;
+        
+        events.forEach((event, index) => {
+            const eventDetails = formatEventWithDetails(event, validArgs.calendarId);
+            text += `${index + 1}. ${eventDetails}\n\n`;
+        });
+        
         return {
             content: [{
                 type: "text",
-                text: formatEventList(events, validArgs.calendarId),
-            }],
+                text: text.trim()
+            }]
         };
     }
 

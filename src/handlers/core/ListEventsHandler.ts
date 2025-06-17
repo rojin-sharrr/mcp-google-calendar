@@ -2,7 +2,7 @@ import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OAuth2Client } from "google-auth-library";
 import { BaseToolHandler } from "./BaseToolHandler.js";
 import { calendar_v3 } from 'googleapis';
-import { formatEventList } from "../utils.js";
+import { formatEventWithDetails } from "../utils.js";
 import { BatchRequestHandler } from "./BatchRequestHandler.js";
 import { convertToRFC3339 } from "../utils/datetime.js";
 
@@ -35,11 +35,44 @@ export class ListEventsHandler extends BaseToolHandler {
             timeZone: validArgs.timeZone
         });
         
+        if (allEvents.length === 0) {
+            return {
+                content: [{
+                    type: "text",
+                    text: `No events found in ${calendarIds.length} calendar(s).`
+                }]
+            };
+        }
+        
+        let text = calendarIds.length === 1 
+            ? `Found ${allEvents.length} event(s):\n\n`
+            : `Found ${allEvents.length} event(s) across ${calendarIds.length} calendars:\n\n`;
+        
+        if (calendarIds.length === 1) {
+            // Single calendar - simple list
+            allEvents.forEach((event, index) => {
+                const eventDetails = formatEventWithDetails(event, event.calendarId);
+                text += `${index + 1}. ${eventDetails}\n\n`;
+            });
+        } else {
+            // Multiple calendars - group by calendar
+            const grouped = this.groupEventsByCalendar(allEvents);
+            
+            for (const [calendarId, events] of Object.entries(grouped)) {
+                text += `Calendar: ${calendarId}\n\n`;
+                events.forEach((event, index) => {
+                    const eventDetails = formatEventWithDetails(event, event.calendarId);
+                    text += `${index + 1}. ${eventDetails}\n\n`;
+                });
+                text += "\n";
+            }
+        }
+        
         return {
             content: [{
                 type: "text",
-                text: this.formatEventList(allEvents, calendarIds),
-            }],
+                text: text.trim()
+            }]
         };
     }
 
@@ -174,32 +207,6 @@ export class ListEventsHandler extends BaseToolHandler {
             const bStart = b.start?.dateTime || b.start?.date || "";
             return aStart.localeCompare(bStart);
         });
-    }
-
-    private formatEventList(events: ExtendedEvent[], calendarIds: string[]): string {
-        if (events.length === 0) {
-            return `No events found in ${calendarIds.length} calendar(s).`;
-        }
-        
-        if (calendarIds.length === 1) {
-            return formatEventList(events, calendarIds[0]);
-        }
-        
-        return this.formatMultiCalendarEvents(events, calendarIds);
-    }
-
-    private formatMultiCalendarEvents(events: ExtendedEvent[], calendarIds: string[]): string {
-        const grouped = this.groupEventsByCalendar(events);
-        
-        let output = `Found ${events.length} events across ${calendarIds.length} calendars:\n\n`;
-        
-        for (const [calendarId, calEvents] of Object.entries(grouped)) {
-            output += `Calendar: ${calendarId}\n`;
-            output += formatEventList(calEvents, calendarId);
-            output += '\n';
-        }
-        
-        return output;
     }
 
     private groupEventsByCalendar(events: ExtendedEvent[]): Record<string, ExtendedEvent[]> {

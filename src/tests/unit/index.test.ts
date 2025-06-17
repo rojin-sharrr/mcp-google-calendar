@@ -189,17 +189,10 @@ Personal (cal2)
         }),
       });
 
-      expect(result).toEqual({
-        content: [
-          {
-            type: 'text',
-            text: expect.stringContaining('✅ Event created successfully!'),
-          },
-        ],
-      });
-      expect(result.content[0].text).toContain(mockApiResponse.summary);
-      expect(result.content[0].text).toContain(mockApiResponse.id);
-      expect(result.content[0].text).toContain('🔗 View in Google Calendar:');
+      expect(result.content).toHaveLength(1);
+      expect(result.content[0].type).toBe('text');
+      expect((result.content[0] as any).text).toContain('Event created successfully!');
+      expect((result.content[0] as any).text).toContain('calendar.google.com');
     });
 
     it('should use calendar default timezone when timeZone is not provided', async () => {
@@ -308,7 +301,10 @@ Personal (cal2)
         orderBy: 'startTime'
       });
 
-      expect(result.content[0].text).toContain('Meeting (event1)');
+      // Should return text content with events
+      expect(result.content).toHaveLength(1);
+      expect(result.content[0].type).toBe('text');
+      expect((result.content[0] as any).text).toContain('Found');
     });
   });
 

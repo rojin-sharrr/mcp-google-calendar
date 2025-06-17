@@ -14,27 +14,6 @@ import { DeleteEventHandler } from "../handlers/core/DeleteEventHandler.js";
 import { FreeBusyEventHandler } from "../handlers/core/FreeBusyEventHandler.js";
 import { GetCurrentTimeHandler } from "../handlers/core/GetCurrentTimeHandler.js";
 
-// Unified Schema Definitions - Single Source of Truth
-// These schemas serve both MCP registration and TypeScript typing
-
-// Common schemas
-const CalendarIdSchema = z.string().describe("ID of the calendar (use 'primary' for the main calendar)");
-const EmailSchema = z.string().email();
-
-// Reminder schema for reusability
-const RemindersSchema = z.object({
-  useDefault: z.boolean().describe("Whether to use the default reminders"),
-  overrides: z.array(z.object({
-    method: z.enum(["email", "popup"]).default("popup").describe("Reminder method"),
-    minutes: z.number().describe("Minutes before the event to trigger the reminder")
-  }).partial({ method: true })).optional().describe("Custom reminders")
-}).describe("Reminder settings for the event");
-
-// Attendee schema
-const AttendeeSchema = z.object({
-  email: EmailSchema.describe("Email address of the attendee")
-});
-
 // Define all tool schemas with TypeScript inference
 export const ToolSchemas = {
   'list-calendars': z.object({}),
@@ -48,7 +27,7 @@ export const ToolSchemas = {
         const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format")
+      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("Start time boundary. Preferred: '2024-01-01T00:00:00' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T00:00:00Z' or '2024-01-01T00:00:00-08:00'.")
       .optional(),
     timeMax: z.string()
@@ -56,7 +35,7 @@ export const ToolSchemas = {
         const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format")
+      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("End time boundary. Preferred: '2024-01-01T23:59:59' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T23:59:59Z' or '2024-01-01T23:59:59-08:00'.")
       .optional(),
     timeZone: z.string().optional().describe(
@@ -65,7 +44,7 @@ export const ToolSchemas = {
   }),
   
   'search-events': z.object({
-    calendarId: CalendarIdSchema,
+    calendarId: z.string().describe("ID of the calendar (use 'primary' for the main calendar)"),
     query: z.string().describe(
       "Free text search query (searches summary, description, location, attendees, etc.)"
     ),
@@ -74,14 +53,14 @@ export const ToolSchemas = {
         const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format")
+      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("Start time boundary. Preferred: '2024-01-01T00:00:00' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T00:00:00Z' or '2024-01-01T00:00:00-08:00'."),
     timeMax: z.string()
       .refine((val) => {
         const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format")
+      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("End time boundary. Preferred: '2024-01-01T23:59:59' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T23:59:59Z' or '2024-01-01T23:59:59-08:00'."),
     timeZone: z.string().optional().describe(
       "Timezone as IANA Time Zone Database name (e.g., America/Los_Angeles). Takes priority over calendar's default timezone. Only used for timezone-naive datetime strings."
@@ -91,7 +70,7 @@ export const ToolSchemas = {
   'list-colors': z.object({}),
   
   'create-event': z.object({
-    calendarId: CalendarIdSchema,
+    calendarId: z.string().describe("ID of the calendar (use 'primary' for the main calendar)"),
     summary: z.string().describe("Title of the event"),
     description: z.string().optional().describe("Description/notes for the event"),
     start: z.string()
@@ -99,31 +78,39 @@ export const ToolSchemas = {
         const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format")
+      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("Event start time: '2024-01-01T10:00:00'"),
     end: z.string()
       .refine((val) => {
         const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format")
+      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("Event end time: '2024-01-01T11:00:00'"),
     timeZone: z.string().optional().describe(
       "Timezone as IANA Time Zone Database name (e.g., America/Los_Angeles). Takes priority over calendar's default timezone. Only used for timezone-naive datetime strings."
     ),
     location: z.string().optional().describe("Location of the event"),
-    attendees: z.array(AttendeeSchema).optional().describe("List of attendee email addresses"),
+    attendees: z.array(z.object({
+      email: z.string().email().describe("Email address of the attendee")
+    })).optional().describe("List of attendee email addresses"),
     colorId: z.string().optional().describe(
       "Color ID for the event (use list-colors to see available IDs)"
     ),
-    reminders: RemindersSchema.optional(),
+    reminders: z.object({
+      useDefault: z.boolean().describe("Whether to use the default reminders"),
+      overrides: z.array(z.object({
+        method: z.enum(["email", "popup"]).default("popup").describe("Reminder method"),
+        minutes: z.number().describe("Minutes before the event to trigger the reminder")
+      }).partial({ method: true })).optional().describe("Custom reminders")
+    }).describe("Reminder settings for the event").optional(),
     recurrence: z.array(z.string()).optional().describe(
       "Recurrence rules in RFC5545 format (e.g., [\"RRULE:FREQ=WEEKLY;COUNT=5\"])"
     )
   }),
   
   'update-event': z.object({
-    calendarId: CalendarIdSchema,
+    calendarId: z.string().describe("ID of the calendar (use 'primary' for the main calendar)"),
     eventId: z.string().describe("ID of the event to update"),
     summary: z.string().optional().describe("Updated title of the event"),
     description: z.string().optional().describe("Updated description/notes"),
@@ -132,7 +119,7 @@ export const ToolSchemas = {
         const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format")
+      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("Updated start time: '2024-01-01T10:00:00'")
       .optional(),
     end: z.string()
@@ -140,14 +127,22 @@ export const ToolSchemas = {
         const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format")
+      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("Updated end time: '2024-01-01T11:00:00'")
       .optional(),
     timeZone: z.string().optional().describe("Updated timezone as IANA Time Zone Database name. If not provided, uses the calendar's default timezone."),
     location: z.string().optional().describe("Updated location"),
-    attendees: z.array(AttendeeSchema).optional().describe("Updated attendee list"),
+    attendees: z.array(z.object({
+      email: z.string().email().describe("Email address of the attendee")
+    })).optional().describe("Updated attendee list"),
     colorId: z.string().optional().describe("Updated color ID"),
-    reminders: RemindersSchema.optional(),
+    reminders: z.object({
+      useDefault: z.boolean().describe("Whether to use the default reminders"),
+      overrides: z.array(z.object({
+        method: z.enum(["email", "popup"]).default("popup").describe("Reminder method"),
+        minutes: z.number().describe("Minutes before the event to trigger the reminder")
+      }).partial({ method: true })).optional().describe("Custom reminders")
+    }).describe("Reminder settings for the event").optional(),
     recurrence: z.array(z.string()).optional().describe("Updated recurrence rules"),
     sendUpdates: z.enum(["all", "externalOnly", "none"]).default("all").describe(
       "Whether to send update notifications"
@@ -160,7 +155,7 @@ export const ToolSchemas = {
         const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format")
+      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("Original start time in the ISO 8601 format '2024-01-01T10:00:00'")
       .optional(),
     futureStartDate: z.string()
@@ -168,7 +163,7 @@ export const ToolSchemas = {
         const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format")
+      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("Start date for future instances in the ISO 8601 format '2024-01-01T10:00:00'")
       .optional()
   }).refine(
@@ -212,7 +207,7 @@ export const ToolSchemas = {
   ),
   
   'delete-event': z.object({
-    calendarId: CalendarIdSchema,
+    calendarId: z.string().describe("ID of the calendar (use 'primary' for the main calendar)"),
     eventId: z.string().describe("ID of the event to delete"),
     sendUpdates: z.enum(["all", "externalOnly", "none"]).default("all").describe(
       "Whether to send cancellation notifications"
@@ -221,7 +216,7 @@ export const ToolSchemas = {
   
   'get-freebusy': z.object({
     calendars: z.array(z.object({
-      id: CalendarIdSchema
+      id: z.string().describe("ID of the calendar (use 'primary' for the main calendar)")
     })).describe(
       "List of calendars and/or groups to query for free/busy information"
     ),
@@ -230,14 +225,14 @@ export const ToolSchemas = {
         const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format")
+      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("Start time boundary. Preferred: '2024-01-01T00:00:00' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T00:00:00Z' or '2024-01-01T00:00:00-08:00'."),
     timeMax: z.string()
       .refine((val) => {
         const withTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/.test(val);
         const withoutTimezone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val);
         return withTimezone || withoutTimezone;
-      }, "Must be ISO 8601 format")
+      }, "Must be ISO 8601 format: '2026-01-01T00:00:00'")
       .describe("End time boundary. Preferred: '2024-01-01T23:59:59' (uses timeZone parameter or calendar timezone). Also accepts: '2024-01-01T23:59:59Z' or '2024-01-01T23:59:59-08:00'."),
     timeZone: z.string().optional().describe("Timezone for the query"),
     groupExpansionMax: z.number().int().max(100).optional().describe(
@@ -281,6 +276,28 @@ interface ToolDefinition {
 
 
 export class ToolRegistry {
+  private static extractSchemaShape(schema: z.ZodType<any>): any {
+    const schemaAny = schema as any;
+    
+    // Handle ZodEffects (schemas with .refine())
+    if (schemaAny._def && schemaAny._def.typeName === 'ZodEffects') {
+      return this.extractSchemaShape(schemaAny._def.schema);
+    }
+    
+    // Handle regular ZodObject
+    if ('shape' in schemaAny) {
+      return schemaAny.shape;
+    }
+    
+    // Handle other nested structures
+    if (schemaAny._def && schemaAny._def.schema) {
+      return this.extractSchemaShape(schemaAny._def.schema);
+    }
+    
+    // Fallback to the original approach
+    return schemaAny._def?.schema?.shape || schemaAny.shape;
+  }
+
   private static tools: ToolDefinition[] = [
     {
       name: "list-calendars",
@@ -290,7 +307,7 @@ export class ToolRegistry {
     },
     {
       name: "list-events",
-      description: "List events from one or more calendars. Each event includes a clickable URL for easy viewing in Google Calendar - always present these URLs to users for convenient access.",
+      description: "List events from one or more calendars.",
       schema: ToolSchemas['list-events'],
       handler: ListEventsHandler,
       handlerFunction: async (args: ListEventsInput & { calendarId: string | string[] }) => {
@@ -343,7 +360,7 @@ export class ToolRegistry {
     },
     {
       name: "search-events",
-      description: "Search for events in a calendar by text query. Each result includes a clickable URL for easy viewing in Google Calendar - always present these URLs to users for convenient access.",
+      description: "Search for events in a calendar by text query.",
       schema: ToolSchemas['search-events'],
       handler: SearchEventsHandler
     },
@@ -367,7 +384,7 @@ export class ToolRegistry {
     },
     {
       name: "delete-event",
-      description: "Delete a calendar event",
+      description: "Delete a calendar event.",
       schema: ToolSchemas['delete-event'],
       handler: DeleteEventHandler
     },
@@ -379,7 +396,7 @@ export class ToolRegistry {
     },
     {
       name: "get-current-time",
-      description: "Get current system time and timezone information. Only use when explicitly asked for current time/date, not for event scheduling or calendar operations.",
+      description: "Get current system time and timezone information.",
       schema: ToolSchemas['get-current-time'],
       handler: GetCurrentTimeHandler
     }
@@ -409,7 +426,7 @@ export class ToolRegistry {
         tool.name,
         {
           description: tool.description,
-          inputSchema: 'shape' in tool.schema ? tool.schema.shape : (tool.schema as any)._def.schema.shape
+          inputSchema: this.extractSchemaShape(tool.schema)
         },
         async (args: any) => {
           // Validate input using our Zod schema
