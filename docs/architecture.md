@@ -21,21 +21,21 @@ OAuth 2.0 with refresh tokens, multi-account support, secure storage in `~/.conf
 Client → Transport → Schema Validation → Handler → Google API → Response
 ```
 
-## MCP Resources
+## MCP Tools
 
-The server provides contextual resources that LLMs can access for enhanced calendar operations:
+The server provides calendar management tools that LLMs can use for calendar operations:
 
-### DateTime Resource (`datetime://current`)
+### Available Tools
 
-Provides real-time date/time context including:
-- ISO 8601 timestamp with timezone
-- User's local timezone 
-- Human-readable local time
-- Day of week, week number, quarter
-- Weekend detection
-- Unix timestamp
-
-This helps Claude understand temporal context when creating, updating, or interpreting calendar events.
+- `list-calendars` - List all available calendars
+- `list-events` - List events with date filtering  
+- `search-events` - Search events by text query
+- `create-event` - Create new calendar events
+- `update-event` - Update existing events
+- `delete-event` - Delete events
+- `get-freebusy` - Check availability across calendars
+- `list-colors` - List available event colors
+- `get-current-time` - Get current system time and timezone information
 
 ## Key Features
 

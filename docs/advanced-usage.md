@@ -86,18 +86,7 @@ The server supports all Google Calendar recurrence rules:
 - Specific days (e.g., every Tuesday and Thursday)
 - End conditions (after N occurrences or by date)
 
-## Smart Scheduling
-
-### Natural Language Understanding
-
-The server interprets various time expressions:
-- "next Tuesday at 2pm"
-- "tomorrow morning"
-- "in 3 days"
-- "end of next week"
-- "first Monday of next month"
-
-### Timezone Handling
+## Timezone Handling
 
 All times require explicit timezone information:
 - Automatic timezone detection based on your calendar settings
@@ -161,37 +150,20 @@ Combine multiple criteria:
 "What percentage of my meetings are recurring?"
 "Which day typically has the most meetings?"
 ```
-
-### Attendee Insights
-
-```
-"Who haven't I met with in the last month?"
-"Which meetings have the most declined invitations?"
-"Show me meetings where I'm optional"
-```
-
 ## Performance Optimization
-
-### Caching
-
-The server implements intelligent caching:
-- Calendar list cached for 5 minutes
-- Color definitions cached for session
-- Free/busy data cached based on query range
 
 ### Rate Limiting
 
 Built-in protection against API limits:
-- Automatic retry with exponential backoff
-- Batch operations to minimize API calls
-- Concurrent request management
+- Automatic retry with exponential backoff in batch operations
+- HTTP transport includes basic rate limiting (100 requests per IP per 15 minutes)
 
 ## Integration Examples
 
-### Daily Briefing
+### Daily Schedule
 
 ```
-"Give me a summary of today's schedule, highlighting any conflicts, prep time needed, and travel time between locations"
+"Show me today's events and check for any scheduling conflicts between all my calendars"
 ```
 
 ### Weekly Planning

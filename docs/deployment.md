@@ -18,10 +18,8 @@ This guide covers deploying the Google Calendar MCP Server for remote access via
 
 ## HTTP Server Features
 
-- ✅ **Session Management**: Secure session-based connections
-- ✅ **CORS Support**: Configurable cross-origin access
-- ✅ **Rate Limiting**: Protection against abuse (100 requests per IP per 15 minutes)
-- ✅ **Health Monitoring**: Health check endpoints
+- ✅ **CORS Support**: Basic cross-origin access support
+- ✅ **Health Monitoring**: Basic health check endpoint
 - ✅ **Graceful Shutdown**: Proper resource cleanup
 - ✅ **Origin Validation**: DNS rebinding protection
 
@@ -32,9 +30,6 @@ This guide covers deploying the Google Calendar MCP Server for remote access via
 ```bash
 # Start on localhost only (default port 3000)
 npm run start:http
-
-# Custom port
-PORT=8080 npm run start:http
 ```
 
 ### Public HTTP Server
@@ -42,9 +37,6 @@ PORT=8080 npm run start:http
 ```bash
 # Listen on all interfaces (0.0.0.0)
 npm run start:http:public
-
-# With custom port
-PORT=8080 npm run start:http:public
 ```
 
 ### Environment Variables
@@ -52,8 +44,7 @@ PORT=8080 npm run start:http:public
 ```bash
 PORT=3000                    # Server port
 HOST=localhost              # Bind address
-SESSION_SECRET=your-secret  # Session encryption key
-ALLOWED_ORIGINS=http://localhost:3000,https://myapp.com
+TRANSPORT=http              # Transport mode
 ```
 
 ## Docker Deployment
@@ -91,7 +82,6 @@ docker run -d \
   -v mcp-tokens:/home/nodejs/.config/google-calendar-mcp \
   -e TRANSPORT=http \
   -e HOST=0.0.0.0 \
-  -e SESSION_SECRET=your-secure-secret \
   --name calendar-mcp \
   google-calendar-mcp
 
@@ -123,7 +113,7 @@ gcloud run deploy calendar-mcp \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars="SESSION_SECRET=your-secret"
+  --set-env-vars="TRANSPORT=http"
 ```
 
 ### AWS ECS
@@ -142,7 +132,7 @@ heroku create your-calendar-mcp
 heroku buildpacks:set heroku/nodejs
 
 # Configure
-heroku config:set SESSION_SECRET=your-secret
+heroku config:set TRANSPORT=http
 heroku config:set GOOGLE_OAUTH_CREDENTIALS=./gcp-oauth.keys.json
 
 # Deploy
@@ -175,26 +165,9 @@ Always use HTTPS in production:
    }
    ```
 
-2. **Direct TLS** (Built-in)
-   ```bash
-   # Provide cert and key
-   TLS_CERT=/path/to/cert.pem \
-   TLS_KEY=/path/to/key.pem \
-   npm run start:http:public
-   ```
+2. **Direct TLS** (Not built-in)
+   For TLS support, use a reverse proxy like nginx or a cloud load balancer with SSL termination.
 
-### CORS Configuration
-
-```bash
-# Single origin
-ALLOWED_ORIGINS=https://myapp.com
-
-# Multiple origins
-ALLOWED_ORIGINS=https://app1.com,https://app2.com
-
-# Development (be careful!)
-ALLOWED_ORIGINS=*
-```
 
 ### Authentication Flow
 
@@ -210,14 +183,8 @@ ALLOWED_ORIGINS=*
 ### Health Checks
 
 ```bash
-# Liveness probe
+# Health check
 curl http://localhost:3000/health
-
-# Readiness probe
-curl http://localhost:3000/health/ready
-
-# Server info
-curl http://localhost:3000/info
 ```
 
 ### Logging
@@ -230,13 +197,6 @@ DEBUG=mcp:* npm run start:http
 NODE_ENV=production npm run start:http
 ```
 
-### Metrics
-
-The server exposes basic metrics:
-- Request count
-- Error rate
-- Response time
-- Active sessions
 
 ## Production Checklist
 
@@ -248,9 +208,8 @@ The server exposes basic metrics:
 
 **Infrastructure:**
 - [ ] Use HTTPS/TLS encryption
-- [ ] Set strong SESSION_SECRET
-- [ ] Configure CORS appropriately
-- [ ] Enable rate limiting
+- [ ] Configure reverse proxy for production
+- [ ] Set up SSL termination
 - [ ] Set up monitoring/alerting for authentication failures
 - [ ] Configure log aggregation
 - [ ] Implement backup strategy for token storage
@@ -258,7 +217,7 @@ The server exposes basic metrics:
 - [ ] Review security headers
 - [ ] Enable graceful shutdown
 
-**Note**: The 7-day token expiration is resolved by publishing your OAuth app to production in Google Cloud Console, not by environment variables.
+**Note**: The 7-day token expiration is resolved by publishing your OAuth app to production in Google Cloud Console.
 
 ## Troubleshooting
 
