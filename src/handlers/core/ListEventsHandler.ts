@@ -47,7 +47,7 @@ export class ListEventsHandler extends BaseToolHandler {
         content: [
           {
             type: "text",
-            text: `No events found in ${calendarIds.length} calendar(s).`,
+            text: "[]",
           },
         ],
       };
@@ -59,23 +59,18 @@ export class ListEventsHandler extends BaseToolHandler {
         : `Found ${allEvents.length} event(s) across ${calendarIds.length} calendars:\n\n`;
 
     if (calendarIds.length === 1) {
-      // Single calendar - simple list
-      allEvents.forEach((event, index) => {
-        const eventDetails = formatEventWithDetails(event, event.calendarId);
-        text += `${index + 1}. ${eventDetails}\n\n`;
-      });
+      text = JSON.stringify(allEvents);
     } else {
       // Multiple calendars - group by calendar
       const grouped = this.groupEventsByCalendar(allEvents);
-
+      const groupedObject = [];
       for (const [calendarId, events] of Object.entries(grouped)) {
-        text += `Calendar: ${calendarId}\n\n`;
-        events.forEach((event, index) => {
-          const eventDetails = formatEventWithDetails(event, event.calendarId);
-          text += `${index + 1}. ${eventDetails}\n\n`;
+        groupedObject.push({
+          calendarId,
+          events,
         });
-        text += "\n";
       }
+      text = JSON.stringify(groupedObject);
     }
 
     return {
